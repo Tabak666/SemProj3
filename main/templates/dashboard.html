@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% comment %} {% block title %}Niga{% endblock %} {% endcomment %}
+{% load static %}
+
+{% block title %}Health Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'styles/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div>
+    <h1>Health Dashboard</h1>
+</div> 
+{% endblock %}

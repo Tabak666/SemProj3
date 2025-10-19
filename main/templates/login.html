@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% comment %} {% block title %}Niga{% endblock %} {% endcomment %}
+{% load static %}
+
+{% block title %}Login{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'styles/login.css' %}">
+{% endblock %}
+
+{% block content %}
+<div>
+    <h1>Login</h1>
+</div> 
+{% endblock %}
