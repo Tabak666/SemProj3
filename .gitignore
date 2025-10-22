@@ -1,0 +1,104 @@
+# Python Cache Files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Django stuff
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# If you're using PostgreSQL
+*.sql
+
+# Django migrations (optional - some teams commit these, some don't)
+# Uncomment the line below if you want to ignore migrations
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# Environment variables
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Django static files (after collectstatic)
+/staticfiles/
+/static_root/
+
+# Media files (user uploads)
+/media/
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+
+# Pytest
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.spyderproject
+.spyproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Node modules (if using npm for frontend)
+node_modules/
+package-lock.json
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.Spotlight-V100
+.Trashes
