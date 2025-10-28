@@ -1,6 +1,4 @@
 {% extends 'base.html' %}
-
-{% comment %} {% block title %}Niga{% endblock %} {% endcomment %}
 {% load static %}
 
 {% block title %}Home{% endblock %}
@@ -12,13 +10,69 @@
 {% block content %}
 
 <div class="side-panel">
-  <h3>Side Panel</h3>
-  <p>Please select a desk</p>
-  <button>Hello</button>
+  <h3>Desk Control Panel</h3>
+
+  <!-- Height Control -->
+  <div class="panel-section">
+    <label for="heightSlider">Desk Height: <span id="heightValue">100</span> cm</label>
+    <input type="range" id="heightSlider" min="60" max="130" value="100" step="1">
+  </div>
+
+  <!-- Saved Configurations -->
+  <div class="panel-section">
+    <h4>Saved Configurations</h4>
+    <select id="configSelect">
+      <option value="">-- Select Configuration --</option>
+      <option value="morning">Morning Work</option>
+      <option value="standing">Standing Mode</option>
+      <option value="break">Break Mode</option>
+    </select>
+    <button id="loadConfig">Load</button>
+  </div>
+
+  <!-- Quick Profiles -->
+  <div class="panel-section">
+    <h4>Quick Profiles</h4>
+    <button class="profile-btn" data-height="70">Profile 1</button>
+    <button class="profile-btn" data-height="100">Profile 2</button>
+    <button class="profile-btn" data-height="120">Profile 3</button>
+  </div>
+
+  <!-- Health Recommendations Toggle -->
+  <div class="panel-section">
+    <label>
+      <input type="checkbox" id="toggleHealth" checked>
+      Show Health Recommendations
+    </label>
+  </div>
+
+  <!-- Reservation Section -->
+  <div id="reservation-section">
+    <h4>Desk Reservation</h4>
+    <p id="selectedDesk">No desk selected</p>
+
+    <div id="reservationActions" style="display:none;">
+      <button id="pairBtn">Pair (Now)</button>
+      <button id="unpairBtn" disabled>Unpair</button>
+      <button id="showBooking">Book for Later</button>
+
+      <div id="bookingForm" style="display:none; margin-top:15px;">
+        <label for="bookStart">Start:</label>
+        <input type="datetime-local" id="bookStart">
+
+        <label for="bookEnd">End:</label>
+        <input type="datetime-local" id="bookEnd">
+
+        <button id="bookBtn">Book</button>
+        <button id="cancelBooking">Cancel</button>
+      </div>
+    </div>
+  </div>
 </div>
 
+<!-- Main Grid -->
 <div class="grid-container">
-  <img src="{% static 'Assets/este.jpg' %}" alt="Fondo" class="background-image">
+  <img src="{% static 'Assets/este.jpg' %}" alt="Background" class="background-image">
 
   <button class="btn btn1">1</button>
   <button class="btn btn2">2</button>
@@ -35,7 +89,126 @@
   <button class="btn btn13">13</button>
 </div>
 
+<script>
+  // === Height Slider ===
+  const slider = document.getElementById('heightSlider');
+  const valueLabel = document.getElementById('heightValue');
+
+  slider.addEventListener('input', () => {
+    valueLabel.textContent = slider.value;
+    // Send updated height to backend (optional)
+  });
+
+  // === Quick Profiles ===
+  document.querySelectorAll('.profile-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const h = btn.getAttribute('data-height');
+      slider.value = h;
+      valueLabel.textContent = h;
+      // Notify backend if needed
+    });
+  });
+
+  // === Load Configuration ===
+  document.getElementById('loadConfig').addEventListener('click', () => {
+    const config = document.getElementById('configSelect').value;
+    if (config) alert(`Loaded configuration: ${config}`);
+  });
+
+  // === Health Recommendations ===
+  document.getElementById('toggleHealth').addEventListener('change', (e) => {
+    const enabled = e.target.checked;
+    console.log(`Health recommendations ${enabled ? 'enabled' : 'disabled'}`);
+  });
+
+  // === Desk Reservation Logic ===
+  const deskButtons = document.querySelectorAll('.btn');
+  const selectedDeskLabel = document.getElementById('selectedDesk');
+  const reservationActions = document.getElementById('reservationActions');
+  const pairBtn = document.getElementById('pairBtn');
+  const unpairBtn = document.getElementById('unpairBtn');
+  const showBooking = document.getElementById('showBooking');
+  const bookingForm = document.getElementById('bookingForm');
+  const bookBtn = document.getElementById('bookBtn');
+  const cancelBooking = document.getElementById('cancelBooking');
+  const bookStart = document.getElementById('bookStart');
+  const bookEnd = document.getElementById('bookEnd');
+
+  const desks = {}; // Store each desk's state
+
+  // When a desk button is clicked
+  deskButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const deskId = btn.textContent.trim();
+      selectedDeskLabel.textContent = `Selected Desk: ${deskId}`;
+      reservationActions.style.display = 'block';
+      bookingForm.style.display = 'none';
+      reservationActions.dataset.currentDesk = deskId;
+
+      const d = desks[deskId];
+      if (d && d.status === 'paired') {
+        pairBtn.disabled = true;
+        unpairBtn.disabled = false;
+      } else {
+        pairBtn.disabled = false;
+        unpairBtn.disabled = true;
+      }
+    });
+  });
+
+  // === Pair (Immediate) ===
+  pairBtn.addEventListener('click', () => {
+    const deskId = reservationActions.dataset.currentDesk;
+    const now = new Date().toLocaleString();
+    desks[deskId] = { status: 'paired', start: now };
+    alert(`Desk ${deskId} paired at ${now}`);
+    pairBtn.disabled = true;
+    unpairBtn.disabled = false;
+  });
+
+  // === Unpair ===
+  unpairBtn.addEventListener('click', () => {
+    const deskId = reservationActions.dataset.currentDesk;
+    if (desks[deskId]) {
+      delete desks[deskId];
+      alert(`Desk ${deskId} unpaired.`);
+    }
+    pairBtn.disabled = false;
+    unpairBtn.disabled = true;
+  });
+
+  // === Show Booking Form ===
+  showBooking.addEventListener('click', () => {
+    bookingForm.style.display = 'block';
+  });
+
+  // === Cancel Booking Form ===
+  cancelBooking.addEventListener('click', () => {
+    bookingForm.style.display = 'none';
+    bookStart.value = '';
+    bookEnd.value = '';
+  });
+
+  // === Book (with date/time) ===
+  bookBtn.addEventListener('click', () => {
+    const deskId = reservationActions.dataset.currentDesk;
+    const start = bookStart.value;
+    const end = bookEnd.value;
+
+    if (!start || !end) {
+      alert('Please select both start and end date/time.');
+      return;
+    }
+
+    desks[deskId] = { status: 'booked', start, end };
+    alert(`Desk ${deskId} booked from ${start} to ${end}`);
+
+    bookingForm.style.display = 'none';
+    bookStart.value = '';
+    bookEnd.value = '';
+    pairBtn.disabled = true;
+    unpairBtn.disabled = false;
+  });
+</script>
 
 {% endblock %}
-
-
