@@ -1,10 +1,10 @@
 /* === SIDE PANEL BASE === */
 .side-panel {
   position: fixed;
-  top: 45px;
+  top: 60px; /* antes: 40px */
   left: 0;
   width: 20vw;
-  height: 100vh;
+  height: calc(100vh - 60px); /* evita que se salga de pantalla */
   background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
   box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
   padding: 25px 20px;
@@ -66,6 +66,8 @@
 }
 
 /* === BUTTONS === */
+
+
 .side-panel button {
   width: 100%;
   margin-top: 8px;
@@ -84,10 +86,11 @@
   transform: translateY(-2px);
 }
 
-.side-panel button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
+/* === Disabled buttons (Pair / Unpair) === */
+
+
+
+
 
 /* === PROFILE BUTTONS === */
 .profile-btn {
@@ -112,15 +115,6 @@
   margin-top: 30px;
   padding-top: 10px;
   border-top: 1px solid #ccc;
-}
-
-#reservationActions button {
-  background-color: #6c63ff;
-  color: white;
-}
-
-#reservationActions button:hover {
-  background-color: #5a54d1;
 }
 
 #bookingForm input,
@@ -188,3 +182,18 @@
 .btn11 { top: 73%; left: 43%; }
 .btn12 { top: 73%; left: 83%; }
 .btn13 { top: 73%; left: 67%; }
+
+
+
+#pairBtn:disabled,
+#unpairBtn:disabled {
+  background-color: #bdbdbd !important;
+  color: #666 !important;
+  border: 1px solid #a0a0a0 !important;
+  cursor: not-allowed !important;
+  opacity: 0.8 !important;
+  transform: none !important;
+  box-shadow: none !important;
+  pointer-events: none !important; /* evita hover */
+}
+
