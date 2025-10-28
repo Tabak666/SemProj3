@@ -1,0 +1,68 @@
+
+.side-panel {
+  position: fixed;        
+  top: 45px;             
+  left: 0;                
+  width: 19.3vw;           
+  height: 100vw;           
+  background-color: #e4d8d8;  
+  padding: 20px;          
+  z-index: -1;            
+  overflow-y: auto;   
+}
+
+.grid-container {
+  position: fixed;
+  top: 70px;             
+  right: 15px;
+  width: 79vw;
+  height: 88vh;
+  overflow: hidden;
+}
+
+/* BACKGROUND */
+.background-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;    
+  z-index: 0;
+}
+
+/* BUTTONS */
+.btn {
+  position: absolute;     /* posicion libre sobre el fondo */
+  width: 14%;             
+  height: 16%;
+  border: none;
+  border-radius: 10px;
+  background-color: rgba(181, 189, 181, 0.8);
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 1;             /* orden de visibilidad */
+  transition: background-color 0.3s;
+}
+
+.btn:hover {
+  background-color: #daf1dc;
+}
+
+/* BUTTON POSITIONS */
+.btn1 { top: 11%; left: 3%; }
+.btn2  { top: 11%; left: 19%; }
+.btn3  { top: 11%; left: 43%; }
+.btn4  { top: 11%; left: 83%; }
+.btn5  { top: 11%; left: 67%;  }
+
+.btn6  { top: 42%; left: 6%; }
+.btn7  { top: 42%; left: 43%; }
+.btn8  { top: 42%; left: 80%; }
+
+.btn9  { top: 73%; left: 3%;  }
+.btn10 { top: 73%; left: 19%; }
+.btn11 { top: 73%; left: 43%; }
+.btn12 { top: 73%; left: 83%; }
+.btn13 { top: 73%; left: 67%; }
