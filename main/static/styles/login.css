@@ -1,0 +1,135 @@
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    background: transparent;
+    font-family: 'Poppins', sans-serif;
+    padding: 20px;
+} nav,  body{
+    background: #327AD9;
+}
+.login-page .main {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: 40px 30px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25), 0 0 40px rgba(50, 122, 217, 0.2);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    max-width: 500px;
+}
+
+.login-page .main:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.login-page h1 {
+    color: #fff;
+    margin-bottom: 25px;
+    font-size: 2.2rem;
+    letter-spacing: 1px;
+}
+
+.login-page input {
+    width: 85%;
+    margin: 10px 0;
+    padding: 12px 15px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    outline: none;
+    transition: box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.login-page input:focus {
+    background: #fff;
+    box-shadow: 0 0 8px rgba(50, 122, 217, 0.6);
+}
+
+.login-page button {
+    width: 70%;
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #BF265E, #E33E8C);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.login-page button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(191, 38, 94, 0.6);
+}
+
+.login-page p {
+    color: #fff;
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+.login-page a {
+    color: #FFB3D1;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.login-page a:hover {
+    text-decoration: underline;
+}
+
+.login-page select {
+    width: 85%;
+    margin: 10px 0;
+    padding: 12px 15px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 12px;
+    cursor: pointer;
+    transition: box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.login-page select:focus {
+    background: #fff;
+    box-shadow: 0 0 8px rgba(50, 122, 217, 0.6);
+}
+
+.login-page select option {
+    color: #333;
+    background: #fff;
+}
+
+
+@media (max-width: 500px) {
+    .login-page .main {
+        padding: 30px 20px;
+    }
+
+    .login-page h1 {
+        font-size: 1.8rem;
+    }
+
+    .login-page input, .login-page button {
+        width: 90%;
+    }
+}

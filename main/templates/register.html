@@ -10,7 +10,34 @@
 {% endblock %}
 
 {% block content %}
-<div>
-    <h1>Sign Up</h1>
-</div> 
+<div class="login-page">
+    <div class="main">
+        <h1>Sign Up</h1>
+        <form>
+            <input type="text" id="username" name="username" 
+            placeholder="Username" required>
+
+            <input type="password" id="password" name="password"
+            placeholder="Password" required>
+            
+            <input type="password" id="password2" name="password2"
+            placeholder="Repeat Password" required>
+            
+            <input type="number" id="height" name="height"
+            placeholder="Height cm" required>
+
+            <select name="gender" id="gender" required>
+                <option value="" disabled selected>Select your gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">No other genders</option>
+            </select>
+
+            <div class="wrap">            
+                <button type="submit">Sign Up</button>
+            </div>
+        </form>
+        <p>Already have an Account? <a href="login.html">Log in here</a></p>
+    </div>
+</div>
 {% endblock %}
