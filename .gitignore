@@ -102,3 +102,7 @@ Thumbs.db
 .DS_Store
 .Spotlight-V100
 .Trashes
+
+#soloprd virtual environment
+Pipfile
+Pipfile.lock
