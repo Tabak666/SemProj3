@@ -1,6 +1,4 @@
 {% extends 'base.html' %}
-
-{% comment %} {% block title %}Niga{% endblock %} {% endcomment %}
 {% load static %}
 
 {% block title %}Health Dashboard{% endblock %}
@@ -10,7 +8,519 @@
 {% endblock %}
 
 {% block content %}
-<div>
-    <h1>Health Dashboard</h1>
-</div> 
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Health Dashboard</h1>
+        <div class="user-info">
+            <strong>Desk:</strong> DESK 4486 | <strong>Today:</strong> <span id="current-date"></span>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+        <div class="metric-card interactive-card" data-metric="sitting">
+            <div class="metric-icon" style="float: right; font-size: 24px;">💺</div>
+            <div class="metric-label">Sitting Time Today</div>
+            <div class="metric-value" id="metricSitting">4.2h</div>
+            <div class="metric-subtitle">67% of work time</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressSitting" style="width: 67%;"></div>
+            </div>
+            <div class="metric-trend">▲ 12 min from yesterday</div>
+        </div>
+
+        <div class="metric-card interactive-card" data-metric="standing">
+            <div class="metric-icon" style="float: right; font-size: 24px;">🚶</div>
+            <div class="metric-label">Standing Time Today</div>
+            <div class="metric-value" id="metricStanding" style="color: #28a745;">2.1h</div>
+            <div class="metric-subtitle">33% of work time</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressStanding" style="width: 33%; background: linear-gradient(90deg, #28a745, #5cb85c);"></div>
+            </div>
+            <div class="metric-trend trend-down">▼ 8 min from yesterday</div>
+        </div>
+
+        <div class="metric-card interactive-card" data-metric="changes">
+            <div class="metric-icon" style="float: right; font-size: 24px;">🔄</div>
+            <div class="metric-label">Position Changes</div>
+            <div class="metric-value" id="metricChanges" style="color: #ff6b6b;">12</div>
+            <div class="metric-subtitle">Last change: <span id="lastChange">45</span> min ago</div>
+            <span class="status-badge status-good">Active User</span>
+            <div style="margin-top: 10px; font-size: 11px; color: #666;">
+                <strong>Avg per hour:</strong> <span id="changesPerHour">1.9</span>
+            </div>
+        </div>
+
+        <div class="metric-card interactive-card" data-metric="health">
+            <div class="metric-icon" style="float: right; font-size: 24px;">❤️</div>
+            <div class="metric-label">Health Score</div>
+            <div class="metric-value" id="metricHealth" style="color: #ffa500;">72/100</div>
+            <div class="metric-subtitle">Good balance</div>
+            <span class="status-badge status-good">On Track</span>
+            <div class="progress-bar" style="margin-top: 10px;">
+                <div class="progress-fill" id="progressHealth" style="width: 72%; background: linear-gradient(90deg, #ffa500, #ffba5c);"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">Today's Distribution</h3>
+                </div>
+                <div class="chart-wrapper" style="position: relative;">
+                    <canvas id="pieChart"></canvas>
+                </div>
+                <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div style="text-align: center; padding: 10px; background: white; border-radius: 6px; cursor: pointer; transition: all 0.3s;" class="stat-card" data-type="sitting">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">⏱️ Sitting</div>
+                            <div style="font-size: 24px; font-weight: bold; color: #327AD9;" id="sittingTime">4.2h</div>
+                            <div style="font-size: 11px; color: #999; margin-top: 3px;">252 minutes</div>
+                        </div>
+                        <div style="text-align: center; padding: 10px; background: white; border-radius: 6px; cursor: pointer; transition: all 0.3s;" class="stat-card" data-type="standing">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">🚶 Standing</div>
+                            <div style="font-size: 24px; font-weight: bold; color: #28a745;" id="standingTime">2.1h</div>
+                            <div style="font-size: 11px; color: #999; margin-top: 3px;">126 minutes</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                        <div style="font-size: 12px; color: #666; margin-bottom: 8px;">Balance Goal Progress</div>
+                        <div style="width: 100%; height: 10px; background: #e0e0e0; border-radius: 5px; overflow: hidden; position: relative;">
+                            <div id="balanceBar" style="height: 100%; background: linear-gradient(90deg, #327AD9, #28a745); width: 82%; transition: width 0.5s ease;"></div>
+                            <div style="position: absolute; top: 50%; left: 40%; transform: translate(-50%, -50%); width: 2px; height: 14px; background: #fff; box-shadow: 0 0 3px rgba(0,0,0,0.3);"></div>
+                        </div>
+                        <div style="font-size: 11px; color: #999; margin-top: 5px;">Target: 40% standing / 60% sitting</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">Weekly Sitting vs Standing</h3>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="chart-control-btn active" data-view="week">Week</button>
+                        <button class="chart-control-btn" data-view="month">Month</button>
+                        <button class="chart-control-btn" id="resetZoom" style="display: none;">Reset Zoom</button>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="weeklyChart"></canvas>
+                </div>
+                <div style="margin-top: 15px; padding: 12px; background: #f8f9fa; border-radius: 6px; display: flex; justify-content: space-around; text-align: center;">
+                    <div>
+                        <div style="font-size: 11px; color: #666;">Weekly Avg Sitting</div>
+                        <div style="font-size: 18px; font-weight: bold; color: #327AD9;" id="weeklyAvgSit">4.5h</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: #666;">Weekly Avg Standing</div>
+                        <div style="font-size: 18px; font-weight: bold; color: #28a745;" id="weeklyAvgStand">2.3h</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: #666;">Best Day</div>
+                        <div style="font-size: 18px; font-weight: bold; color: #ffa500;" id="bestDay">Wed</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations Section -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="recommendations">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0;">💡 Health Recommendations</h3>
+                    <button id="refreshRecommendations" style="padding: 6px 12px; border: 1px solid #327AD9; background: white; color: #327AD9; border-radius: 5px; cursor: pointer; font-size: 12px; transition: all 0.2s;">
+                        🔄 Refresh
+                    </button>
+                </div>
+                <div class="recommendation-item" data-priority="high">
+                    <input type="checkbox" id="rec1" style="margin-right: 10px; cursor: pointer;">
+                    <span class="recommendation-icon" style="background: #ff6b6b;">1</span>
+                    <label for="rec1" style="cursor: pointer; flex: 1;">
+                        <strong>Consider standing more:</strong> You've been sitting for 4.2 hours today. Try to increase standing time to 40%.
+                    </label>
+                    <span class="priority-badge" style="background: #ff6b6b; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">HIGH</span>
+                </div>
+                <div class="recommendation-item" data-priority="medium">
+                    <input type="checkbox" id="rec2" style="margin-right: 10px; cursor: pointer;">
+                    <span class="recommendation-icon" style="background: #28a745;">2</span>
+                    <label for="rec2" style="cursor: pointer; flex: 1;">
+                        <strong>Good job on position changes:</strong> 12 transitions today shows active behavior. Keep it up!
+                    </label>
+                    <span class="priority-badge" style="background: #28a745; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">GOOD</span>
+                </div>
+                <div class="recommendation-item" data-priority="medium">
+                    <input type="checkbox" id="rec3" style="margin-right: 10px; cursor: pointer;">
+                    <span class="recommendation-icon" style="background: #ffa500;">3</span>
+                    <label for="rec3" style="cursor: pointer; flex: 1;">
+                        <strong>Next break suggestion:</strong> Consider standing for the next 30 minutes to improve circulation.
+                    </label>
+                    <span class="priority-badge" style="background: #ffa500; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">MEDIUM</span>
+                </div>
+                <div class="recommendation-item" data-priority="low">
+                    <input type="checkbox" id="rec4" style="margin-right: 10px; cursor: pointer;">
+                    <span class="recommendation-icon" style="background: #327AD9;">4</span>
+                    <label for="rec4" style="cursor: pointer; flex: 1;">
+                        <strong>Optimal desk height:</strong> Your current setting of 680mm is ideal for your height (175cm).
+                    </label>
+                    <span class="priority-badge" style="background: #327AD9; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">INFO</span>
+                </div>
+                <div style="margin-top: 15px; padding: 10px; background: white; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Completed Today</div>
+                    <div style="font-size: 20px; font-weight: bold; color: #327AD9;">
+                        <span id="completedCount">0</span> / 4
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Summary -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3 class="chart-title">This Week's Summary</h3>
+        </div>
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Average Daily Sitting</div>
+                <div class="metric-value">4.5h</div>
+                <span class="status-badge status-warning">Improve</span>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Average Daily Standing</div>
+                <div class="metric-value">2.3h</div>
+                <span class="status-badge status-good">Good</span>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Total Position Changes</div>
+                <div class="metric-value">78</div>
+                <span class="status-badge status-good">Active</span>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Weekly Health Score</div>
+                <div class="metric-value">75/100</div>
+                <span class="status-badge status-good">Improving</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script>
+    // Display current date
+    document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    // Pie Chart
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    const sittingGradient = pieCtx.createLinearGradient(0, 0, 0, 400);
+    sittingGradient.addColorStop(0, '#5ca4f5');
+    sittingGradient.addColorStop(1, '#327AD9');
+    
+    const standingGradient = pieCtx.createLinearGradient(0, 0, 0, 400);
+    standingGradient.addColorStop(0, '#5cb85c');
+    standingGradient.addColorStop(1, '#28a745');
+    
+    const pieChart = new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Sitting Time', 'Standing Time'],
+            datasets: [{
+                data: [67, 33],
+                backgroundColor: [sittingGradient, standingGradient],
+                borderWidth: 3,
+                borderColor: '#ffffff',
+                hoverOffset: 15,
+                hoverBorderWidth: 4,
+                hoverBorderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        font: {
+                            size: 14,
+                            weight: '500'
+                        },
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        boxWidth: 12,
+                        boxHeight: 12
+                    },
+                    onClick: function(e, legendItem, legend) {
+                        const index = legendItem.index;
+                        const chart = legend.chart;
+                        const meta = chart.getDatasetMeta(0);
+                        
+                        // Toggle visibility
+                        meta.data[index].hidden = !meta.data[index].hidden;
+                        chart.update();
+                        
+                        // Highlight corresponding stat card
+                        const type = index === 0 ? 'sitting' : 'standing';
+                        const card = document.querySelector(`.stat-card[data-type="${type}"]`);
+                        card.classList.add('highlighted');
+                        setTimeout(() => card.classList.remove('highlighted'), 1000);
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 13
+                    },
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const hours = (value / 100 * 6.3).toFixed(1);
+                            return [
+                                label + ': ' + value + '%',
+                                'Time: ' + hours + ' hours',
+                                'of 6.3 hours total'
+                            ];
+                        }
+                    }
+                }
+            },
+            animation: {
+                animateRotate: true,
+                animateScale: true
+            },
+        },
+        plugins: [{
+            id: 'centerText',
+            beforeDraw: function(chart) {
+                const width = chart.width;
+                const height = chart.height;
+                const ctx = chart.ctx;
+                
+                ctx.restore();
+                const fontSize = (height / 180).toFixed(2);
+                ctx.font = 'bold ' + fontSize + 'em sans-serif';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#327AD9';
+                
+                const mainText = '6.3h';
+                const textX = Math.round((width - ctx.measureText(mainText).width) / 2);
+                const textY = height / 2 - 10;
+                
+                ctx.fillText(mainText, textX, textY);
+                
+                // Add subtitle
+                ctx.font = fontSize * 0.4 + 'em sans-serif';
+                ctx.fillStyle = '#666';
+                const subtitle = 'Total Time';
+                const subtitleX = Math.round((width - ctx.measureText(subtitle).width) / 2);
+                ctx.fillText(subtitle, subtitleX, textY + 25);
+                
+                ctx.save();
+            }
+        }]
+    });
+
+    // Interactive stat cards
+    document.querySelectorAll('.stat-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const type = this.dataset.type;
+            const index = type === 'sitting' ? 0 : 1;
+            
+            // Highlight the chart segment
+            pieChart.setActiveElements([{datasetIndex: 0, index: index}]);
+            pieChart.tooltip.setActiveElements([{datasetIndex: 0, index: index}]);
+            pieChart.update();
+            
+            // Add pulse effect
+            this.classList.add('pulsing');
+            setTimeout(() => {
+                this.classList.remove('pulsing');
+                pieChart.setActiveElements([]);
+                pieChart.tooltip.setActiveElements([]);
+                pieChart.update();
+            }, 2000);
+        });
+    });
+    
+    // Weekly Chart - Last 7 days
+    const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+    
+    const weekData = {
+        week: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            sitting: [5.2, 4.8, 4.5, 4.9, 4.2, 3.1, 2.8],
+            standing: [1.8, 2.2, 2.5, 2.1, 2.8, 1.9, 1.5]
+        },
+        month: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            sitting: [4.9, 4.7, 4.5, 4.3],
+            standing: [2.1, 2.3, 2.5, 2.7]
+        }
+    };
+    
+    const weeklyChart = new Chart(weeklyCtx, {
+        type: 'line',
+        data: {
+            labels: weekData.week.labels,
+            datasets: [{
+                label: 'Sitting Hours',
+                data: weekData.week.sitting,
+                borderColor: '#327AD9',
+                backgroundColor: 'rgba(50, 122, 217, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                pointBackgroundColor: '#327AD9',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#327AD9',
+                pointHoverBorderWidth: 3
+            }, {
+                label: 'Standing Hours',
+                data: weekData.week.standing,
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                pointBackgroundColor: '#28a745',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#28a745',
+                pointHoverBorderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 8,
+                    ticks: {
+                        callback: function(value) {
+                            return value + 'h';
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: {
+                            size: 13,
+                            weight: '500'
+                        },
+                        usePointStyle: true,
+                        boxWidth: 8,
+                        boxHeight: 8
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 13
+                    },
+                    callbacks: {
+                        afterLabel: function(context) {
+                            const total = context.dataset.data[context.dataIndex];
+                            return 'Total: ' + (total * 60).toFixed(0) + ' minutes';
+                        }
+                    }
+                },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x',
+                    },
+                    zoom: {
+                        wheel: {
+                            enabled: true,
+                        },
+                        pinch: {
+                            enabled: true
+                        },
+                        mode: 'x',
+                    }
+                }
+            }
+        }
+    });
+
+    // Chart view switcher
+    document.querySelectorAll('.chart-control-btn[data-view]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.chart-control-btn[data-view]').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            const view = this.dataset.view;
+            weeklyChart.data.labels = weekData[view].labels;
+            weeklyChart.data.datasets[0].data = weekData[view].sitting;
+            weeklyChart.data.datasets[1].data = weekData[view].standing;
+            weeklyChart.update('active');
+        });
+    });
+
+    // Recommendation checkboxes
+    let completedCount = 0;
+    document.querySelectorAll('.recommendation-item input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const item = this.closest('.recommendation-item');
+            if (this.checked) {
+                item.classList.add('completed');
+                completedCount++;
+            } else {
+                item.classList.remove('completed');
+                completedCount--;
+            }
+            document.getElementById('completedCount').textContent = completedCount;
+           
+        });
+    });
+</script>
 {% endblock %}
