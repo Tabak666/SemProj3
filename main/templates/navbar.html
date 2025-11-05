@@ -10,21 +10,23 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'index' %}">Home</a>
                 </li>
-                {% comment %} {% if user.is_authenticated %} {% endcomment %}
-                {% comment %} <li class="nav-item">
-                    <a class="nav-link" href="{% url 'logout' %}">Logout</a>
-                </li> {% endcomment %}
-                {% comment %} {% else %}  {% endcomment %}
+                {% if request.session.user_id %}
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                </li> 
+                {% else %}
+                <li class="nav-item">
                     <a class="nav-link" href="{% url 'login' %}">Login</a>
                 </li>
+                {% endif %}
+                {% if request.session.role == 'admin' %}
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'register' %}">Sign Up</a>
+                    <a class="nav-link" href="{% url 'approvals' %}">Approvals</a>
                 </li>
-                {% comment %} {% endif %} {% endcomment %}
+                {% endif %}
             </ul>
         </div>
     </div>

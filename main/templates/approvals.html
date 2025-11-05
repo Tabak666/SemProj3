@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Approvals{% endblock %}
+
+{% block content %}
+<div class="login-page">
+  <div class="main">
+    <h1>Pending User Approvals</h1>
+    {% if pending_users %}
+      <table style="width:100%; border-collapse: collapse; margin-top: 20px;">
+        <thead>
+          <tr style="background-color: #f2f2f2;">
+            <th style="border: 1px solid #ccc; padding: 10px;">Username</th>
+            <th style="border: 1px solid #ccc; padding: 10px;">Full Name</th>
+            <th style="border: 1px solid #ccc; padding: 10px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in pending_users %}
+          <tr>
+            <td style="border: 1px solid #ccc; padding: 10px;">{{ user.username }}</td>
+            <td style="border: 1px solid #ccc; padding: 10px;">{{ user.first_name }} {{ user.last_name }}</td>
+            <td style="border: 1px solid #ccc; padding: 10px;">
+              <form method="POST" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="user_id" value="{{ user.id }}">
+                <button type="submit" name="action" value="approve" style="background-color: #4CAF50; color: white; border: none; padding: 8px 12px; cursor: pointer;">Approve</button>
+              </form>
+              <form method="POST" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="user_id" value="{{ user.id }}">
+                <button type="submit" name="action" value="decline" style="background-color: #f44336; color: white; border: none; padding: 8px 12px; cursor: pointer;">Decline</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="color:black;">No pending users 🎉</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

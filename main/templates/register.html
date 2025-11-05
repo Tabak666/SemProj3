@@ -2,6 +2,8 @@
 
 {% comment %} {% block title %}Niga{% endblock %} {% endcomment %}
 {% load static %}
+{% load widget_tweaks %}
+
 
 {% block title %}Sign Up{% endblock %}
 
@@ -13,31 +15,25 @@
 <div class="login-page">
     <div class="main">
         <h1>Sign Up</h1>
-        <form>
-            <input type="text" id="username" name="username" 
-            placeholder="Username" required>
-
-            <input type="password" id="password" name="password"
-            placeholder="Password" required>
+        <form method="POST" novalidate>
+            {% csrf_token %}
+            {{ form.first_name }}  {% comment %} first name {% endcomment %}
             
-            <input type="password" id="password2" name="password2"
-            placeholder="Repeat Password" required>
-            
-            <input type="number" id="height" name="height"
-            placeholder="Height cm" required>
+            {{ form.last_name }} {% comment %} last name {% endcomment %}
 
-            <select name="gender" id="gender" required>
-                <option value="" disabled selected>Select your gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">No other genders</option>
-            </select>
+            {{ form.username }} {% comment %} username {% endcomment %}
+
+            {{ form.password }}{% comment %} password {% endcomment %}
+            
+            {{ form.height }} {% comment %} height {% endcomment %}
+
+            {{form.gender }} {% comment %} gender {% endcomment %}
 
             <div class="wrap">            
                 <button type="submit">Sign Up</button>
             </div>
         </form>
-        <p>Already have an Account? <a href="login.html">Log in here</a></p>
+        <p>Already have an Account? <a href="{% url 'login' %}">Log in here</a></p>
     </div>
 </div>
 {% endblock %}
