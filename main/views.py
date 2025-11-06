@@ -57,6 +57,8 @@ def approvals_view(request):
         return redirect('index')
 
     pending_users = Users.objects.filter(approved=False)
+    # Count currently approved users
+    approved_users_count = Users.objects.filter(approved=True).count()
 
     if request.method == 'POST':
         user_id = request.POST.get('user_id')
@@ -77,7 +79,11 @@ def approvals_view(request):
             messages.error(request, "User not Found")
         return redirect('approvals')
     
-    return render(request, 'approvals.html', {'pending_users': pending_users})
+    context = {
+        'pending_users': pending_users,
+        'approved_users_count': approved_users_count
+    }
+    return render(request, 'approvals.html', context)
 
 
 def dashboard_view(request):

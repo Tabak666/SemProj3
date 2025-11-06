@@ -1,45 +1,225 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Approvals{% endblock %}
+{% block title %}User Approvals - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'styles/approvals.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="login-page">
-  <div class="main">
-    <h1>Pending User Approvals</h1>
-    {% if pending_users %}
-      <table style="width:100%; border-collapse: collapse; margin-top: 20px;">
-        <thead>
-          <tr style="background-color: #f2f2f2;">
-            <th style="border: 1px solid #ccc; padding: 10px;">Username</th>
-            <th style="border: 1px solid #ccc; padding: 10px;">Full Name</th>
-            <th style="border: 1px solid #ccc; padding: 10px;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for user in pending_users %}
-          <tr>
-            <td style="border: 1px solid #ccc; padding: 10px;">{{ user.username }}</td>
-            <td style="border: 1px solid #ccc; padding: 10px;">{{ user.first_name }} {{ user.last_name }}</td>
-            <td style="border: 1px solid #ccc; padding: 10px;">
-              <form method="POST" style="display:inline;">
-                {% csrf_token %}
-                <input type="hidden" name="user_id" value="{{ user.id }}">
-                <button type="submit" name="action" value="approve" style="background-color: #4CAF50; color: white; border: none; padding: 8px 12px; cursor: pointer;">Approve</button>
-              </form>
-              <form method="POST" style="display:inline;">
-                {% csrf_token %}
-                <input type="hidden" name="user_id" value="{{ user.id }}">
-                <button type="submit" name="action" value="decline" style="background-color: #f44336; color: white; border: none; padding: 8px 12px; cursor: pointer;">Decline</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p style="color:black;">No pending users 🎉</p>
+<div class="approvals-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>
+            <span class="icon">👥</span>
+            User Approvals
+        </h1>
+        <p>Review and manage pending user registration requests</p>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="messages-container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" role="alert">
+            <span class="alert-icon">
+                {% if message.tags == 'error' %}⚠️{% elif message.tags == 'success' %}✓{% elif message.tags == 'warning' %}⚡{% else %}ℹ️{% endif %}
+            </span>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
     {% endif %}
-  </div>
+
+    <!-- Statistics Bar -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-icon pending">
+                ⏳
+            </div>
+            <div class="stat-content">
+                <h3>Pending Approvals</h3>
+                <p>{{ pending_users|length }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon approved">
+                ✅
+            </div>
+            <div class="stat-content">
+                <h3>Total Users</h3>
+                <p>{{ approved_users_count }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approvals Section -->
+    <div class="approvals-section">
+        <div class="section-header">
+            <h2>
+                <span>📋</span>
+                Pending User Registrations
+            </h2>
+        </div>
+
+        {% if pending_users %}
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Details</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in pending_users %}
+                <tr>
+                    <td>
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                {{ user.first_name.0|upper }}{{ user.last_name.0|upper }}
+                            </div>
+                            <div class="user-details">
+                                <div class="username">@{{ user.username }}</div>
+                                <div class="fullname">{{ user.first_name }} {{ user.last_name }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="user-details">
+                            <div class="user-meta">
+                                <span>📏 {{ user.height }}cm</span>
+                                <span>{{ user.get_gender_display }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge pending">
+                            <span>⏳</span>
+                            Pending
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <form method="POST" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                <button type="submit" name="action" value="approve" class="btn-action btn-approve">
+                                    <span>✓</span>
+                                    Approve
+                                </button>
+                            </form>
+                            <button type="button" 
+                                    class="btn-action btn-decline" 
+                                    onclick="showDeclineModal('{{ user.id }}', '{{ user.username }}', '{{ user.first_name }}', '{{ user.last_name }}')">
+                                <span>✗</span>
+                                Decline
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h3>All Caught Up!</h3>
+            <p>There are no pending user approvals at the moment.</p>
+        </div>
+        {% endif %}
+    </div>
 </div>
+
+<!-- Custom Confirmation Modal -->
+<div class="confirm-modal-overlay" id="confirmModal">
+    <div class="confirm-modal">
+        <div class="confirm-modal-header">
+            <div class="confirm-modal-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="confirm-modal-title">Decline User Registration?</h3>
+        </div>
+        <div class="confirm-modal-body">
+            <p class="confirm-modal-message">
+                Are you sure you want to decline this user? This action cannot be undone and the user will be permanently removed from the system.
+            </p>
+            <div class="confirm-user-info">
+                <div class="user-avatar" id="modalUserAvatar"></div>
+                <div class="user-details">
+                    <div class="username" id="modalUsername"></div>
+                    <div class="fullname" id="modalFullname"></div>
+                </div>
+            </div>
+        </div>
+        <div class="confirm-modal-footer">
+            <button type="button" class="confirm-btn confirm-btn-cancel" onclick="hideDeclineModal()">
+                Cancel
+            </button>
+            <form method="POST" id="declineForm">
+                {% csrf_token %}
+                <input type="hidden" name="user_id" id="declineUserId">
+                <button type="submit" name="action" value="decline" class="confirm-btn confirm-btn-confirm">
+                    Decline User
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Show decline modal
+function showDeclineModal(userId, username, firstName, lastName) {
+    const modal = document.getElementById('confirmModal');
+    const form = document.getElementById('declineForm');
+    const userIdInput = document.getElementById('declineUserId');
+    const usernameEl = document.getElementById('modalUsername');
+    const fullnameEl = document.getElementById('modalFullname');
+    const avatarEl = document.getElementById('modalUserAvatar');
+    
+    // Set user data
+    userIdInput.value = userId;
+    usernameEl.textContent = '@' + username;
+    fullnameEl.textContent = firstName + ' ' + lastName;
+    avatarEl.textContent = firstName.charAt(0).toUpperCase() + lastName.charAt(0).toUpperCase();
+    
+    // Show modal
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+// Hidedecline modal
+function hideDeclineModal() {
+    const modal = document.getElementById('confirmModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideDeclineModal();
+    }
+});
+
+// Close modal on overlay click
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideDeclineModal();
+    }
+});
+
+// Add animations on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const stats = document.querySelectorAll('.stat-card');
+    stats.forEach((stat, index) => {
+        stat.style.animationDelay = `${0.1 * index}s`;
+    });
+});
+</script>
 {% endblock %}
