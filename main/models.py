@@ -14,5 +14,6 @@ class Users(models.Model):
     height = models.IntegerField()
     activity_level = models.IntegerField(null=True, blank=True)
     role = models.CharField(max_length=20, default='user')
+    approved = models.BooleanField(default=False)
     table_id = models.IntegerField(db_default=None, null=True)
 
