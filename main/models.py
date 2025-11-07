@@ -1,14 +1,21 @@
 from django.db import models
 
+# Create your models here.
+
+GENDER_CHOICES = [
+    ('M', 'Male'),
+    ('F', 'Female'),
+]
 class Users(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     username = models.CharField(max_length=100)
     password = models.CharField(max_length=100)
-    gender = models.CharField(max_length=100)
+    gender = models.CharField(max_length=100, choices=GENDER_CHOICES)
     height = models.IntegerField()
-    activity_level = models.IntegerField()
-    role = models.CharField(max_length=20)
+    activity_level = models.IntegerField(null=True, blank=True)
+    role = models.CharField(max_length=20, default='user')
+    approved = models.BooleanField(default=False)
     table_id = models.IntegerField(db_default=None, null=True)
 
 
