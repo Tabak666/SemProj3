@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'main',
     'django_extensions',
     'widget_tweaks',
+    'tableAPI',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
