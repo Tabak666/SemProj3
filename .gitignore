@@ -106,3 +106,6 @@ Thumbs.db
 #soloprd virtual environment
 Pipfile
 Pipfile.lock
+
+#what even is this??
+/__pycache__
