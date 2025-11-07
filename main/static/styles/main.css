@@ -65,8 +65,9 @@
   box-shadow: 0 0 4px rgba(108, 99, 255, 0.3);
 }
 
-/* === BUTTONS === */
 
+
+/* === BUTTONS === */
 
 .side-panel button {
   width: 100%;
@@ -86,10 +87,8 @@
   transform: translateY(-2px);
 }
 
+
 /* === Disabled buttons (Pair / Unpair) === */
-
-
-
 
 
 /* === PROFILE BUTTONS === */
@@ -126,6 +125,11 @@
   border: 1px solid #aaa;
 }
 
+/* ------------------------------------------
+
+
+
+
 /* === GRID & BACKGROUND === */
 .grid-container {
   position: fixed;
@@ -146,25 +150,41 @@
   z-index: 0;
 }
 
-/* === DESK BUTTONS === */
-.btn {
+/* === DESK BUTTONS (image-based) === */
+.grid-container .btn {
   position: absolute;
-  width: 14%;
+  width: 14.5%;
   height: 16%;
-  border: none;
+  border: black 3px solid;
   border-radius: 10px;
-  background-color: rgba(108, 99, 255, 0.7);
-  color: white;
-  font-size: 18px;
+  background-image: url("/static/Assets/desk.svg");
+  background-size: cover;       /* scale to fit */
+  background-position: center;  /* center image */
+  background-repeat: no-repeat; /* no tiling */
   cursor: pointer;
   z-index: 1;
-  transition: background-color 0.3s, transform 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+  color: #5a54d1;
+  font-size: 22px;
+  font-weight: 800;
+  display: flex;
+  justify-content: flex-start; /* left align number horizontally */
+  align-items: flex-end;       /* bottom align number vertically */
+  padding: 4px 8px;           /* space from the bottom-left corner */
 }
 
-.btn:hover {
-  background-color: rgba(108, 99, 255, 0.9);
-  transform: translateY(-3px);
+/* Hover & click effects */
+.grid-container .btn:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
 }
+
+.grid-container .btn:active {
+  transform: scale(0.95);
+  filter: brightness(0.9);
+}
+
 
 /* === DESK BUTTON POSITIONS === */
 .btn1 { top: 11%; left: 3%; }
@@ -180,8 +200,8 @@
 .btn9  { top: 73%; left: 3%; }
 .btn10 { top: 73%; left: 19%; }
 .btn11 { top: 73%; left: 43%; }
-.btn12 { top: 73%; left: 83%; }
-.btn13 { top: 73%; left: 67%; }
+.btn12 { top: 73%; left: 67%; }
+.btn13 { top: 73%; left: 83%; }
 
 
 
@@ -197,3 +217,219 @@
   pointer-events: none !important; /* evita hover */
 }
 
+/* Ensure Bootstrap modal buttons keep Bootstrap look */
+.modal .btn {
+  position: static;
+  width: auto;
+  height: auto;
+  transform: none;
+  box-shadow: none;
+  border-radius: .375rem; /* Bootstrap default */
+}
+.modal .btn + .btn { margin-left: .5rem; }
+.modal .btn-secondary {
+  background-color: var(--bs-secondary);
+  border-color: var(--bs-secondary);
+  color: #fff;
+}
+.modal .btn-secondary:hover {
+  background-color: #5c636a; /* Bootstrap approx hover */
+  border-color: #565e64;
+}
+
+/* Stronger guarantee for the pairing modal close button */
+.pairing-modal .modal-footer .modal-close-btn {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+  color: #fff !important;
+  padding: .375rem .75rem !important;
+  border-radius: .375rem !important;
+}
+.pairing-modal .modal-footer .modal-close-btn:hover {
+  background-color: #5a54d1 !important; /* close to your theme */
+  border-color: #524cc1 !important;
+}
+
+
+/* === HEALTH POPUP (Final Polished UI) === */
+.health-popup {
+  position: fixed;
+  top: 25px;
+  right: 25px;
+  background: linear-gradient(135deg, #6c63ff 0%, #837dff 100%);
+  color: #fff;
+  padding: 20px 24px;
+  border-radius: 14px;
+  box-shadow: 0 12px 25px rgba(108, 99, 255, 0.3);
+  font-size: 0.95rem;
+  font-weight: 500;
+  width: 380px;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px) scale(0.97);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  z-index: 2000;
+}
+
+.health-popup.show {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0) scale(1);
+}
+
+.health-popup p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Buttons layout */
+.popup-buttons {
+  display: flex;
+  justify-content: space-between; /* ensures left-right spacing */
+  align-items: center;
+  margin-top: 12px;
+}
+
+.popup-buttons button {
+  flex: 1;
+  margin: 0 4px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Accept button (left) */
+#acceptBtn {
+  background-color: #fff;
+  color: #6c63ff;
+}
+
+#acceptBtn:hover {
+  background-color: #efedff;
+  transform: translateY(-1px);
+}
+
+/* Ignore button (right) */
+#ignoreBtn {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+#ignoreBtn:hover {
+  background-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+/* --- Color variants (with refined tones) --- */
+.health-popup.low {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff6f61 100%);
+  box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
+}
+
+.health-popup.high {
+  background: linear-gradient(135deg, #ff9800 0%, #ffb347 100%);
+  box-shadow: 0 12px 25px rgba(255, 152, 0, 0.4);
+}
+
+.health-popup.correct {
+  background: linear-gradient(135deg, #7feaa3 0%, #a0f2bc 100%); /* lighter green */
+  box-shadow: 0 12px 25px rgba(127, 234, 163, 0.35);
+  color: #063d18;
+}
+
+/* --- Color variants (with refined tones) --- */
+.health-popup.low {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff6f61 100%);
+  box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
+}
+
+.health-popup.high {
+  background: linear-gradient(135deg, #ff9800 0%, #ffb347 100%);
+  box-shadow: 0 12px 25px rgba(255, 152, 0, 0.4);
+}
+
+.health-popup.correct {
+  background: linear-gradient(135deg, #6fdd8b 0%, #82e0aa 100%); /* softer green */
+  box-shadow: 0 12px 25px rgba(111, 221, 139, 0.35);
+  color: #063d18;
+}
+
+.popup-buttons button.dark {
+  background-color: rgba(0, 0, 0, 0.15);
+  color: white;
+}
+
+.popup-buttons button.dark:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+/* --- Sitting Reminder Popup (teal tone) --- */
+.health-popup.sitting {
+  background: linear-gradient(135deg, #26c6da 0%, #80deea 100%);
+  box-shadow: 0 12px 25px rgba(38, 198, 218, 0.4);
+  color: #004d40;
+}
+
+.popup-buttons button#acceptBtn.sitting-btn {
+  background-color: #004d40;
+  color: #fff;
+}
+
+.popup-buttons button#ignoreBtn.sitting-btn {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #004d40;
+}
+
+button:disabled,
+button[disabled] {
+  background-color: #bdbdbd !important;
+  color: #666 !important;
+  border: 1px solid #a0a0a0 !important;
+  cursor: not-allowed !important;
+  opacity: 0.8 !important;
+  transform: none !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+.status-message {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  background: #eef5ff;
+  color: #1b4a9b;
+  display: none;
+}
+.status-message.error {
+  background: #fdecea;
+  color: #b71c1c;
+}
+.status-message.success {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+/* === Health Popup Header === */
+.popup-header {
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  padding-bottom: 6px;
+}
+
+.popup-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #ffffff;
+}
