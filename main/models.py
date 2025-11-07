@@ -21,7 +21,7 @@ class Users(models.Model):
 
 class Tables(models.Model):
     height = models.IntegerField()
-    api_key = models.CharField()
+    api_key = models.CharField(max_length=255)
     
 
 class UserTablePairs(models.Model):
