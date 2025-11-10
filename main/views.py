@@ -12,3 +12,16 @@ def register_view(request):
 
 def dashboard_view(request):
     return render(request, 'dashboard.html')
+
+def load_view(request, view_name):
+    if view_name == "desks":
+        return render(request, "partials/desks.html")
+    elif view_name == "overview":
+        return render(request, "partials/overview.html")
+    else:
+        return render(request, "partials/desks.html")
+def overview(request):
+    return render(request, "partials/overview.html")
+
+def desk(request):
+    return render(request, "partials/desks.html")
