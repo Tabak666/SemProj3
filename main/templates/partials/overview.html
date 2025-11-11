@@ -1,0 +1,30 @@
+{% load static %}
+
+<div class="overview-container">
+  <div class="overview-header">
+    <div class="title-section">
+      <h2>📊 Room and Floor Overview</h2>
+      <p>Welcome to your Smart Desk Dashboard.</p>
+    </div>
+
+    <div class="floor-selector">
+      <label for="floorSelect">Floor:</label>
+      <select id="floorSelect">
+        <option value="1">1st Floor</option>
+        <option value="2">2nd Floor</option>
+        <option value="3">3rd Floor</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="overview-grid">
+    <button class="room1" data-label="Room A"></button>
+    <button class="room2" data-label="Room B"></button>
+
+    <!-- ✅ Corridor separator -->
+    <div class="corridor" id="corridorLabel">LINAK Corridor</div>
+
+    <button class="room3" data-label="Room C"></button>
+    <button class="room4" data-label="Room D"></button>
+  </div>
+</div>
