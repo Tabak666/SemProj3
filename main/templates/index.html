@@ -11,6 +11,7 @@
 
 <div class="side-panel">
   <h3>Control Panel</h3>
+  {% if request.session.user_id %}
 
     <!-- Reservation Section -->
   <div id="reservation-section">
@@ -69,9 +70,8 @@
       Show Health Recommendations
     </label>
   </div>
-
 </div>
-
+{% endif %}
 <!-- Main Grid -->
 <div class="grid-container">
   <img src="{% static 'Assets/este.jpg' %}" alt="Background" class="background-image">
