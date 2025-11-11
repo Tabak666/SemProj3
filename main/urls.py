@@ -9,4 +9,6 @@ urlpatterns = [
     path('load_view/<str:view_name>/', views.load_view, name='load_view'),
     path("", views.overview, name="overview"),
     path("desk/", views.desk, name="desk_view"),
+    path('logout/', views.logout_view, name='logout'),
+    path('approvals/', views.approvals_view, name='approvals')
 ]
