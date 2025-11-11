@@ -12,7 +12,11 @@
 <div class="side-panel">
   <h3>Control Panel</h3>
   {% if request.session.user_id %}
-
+  <div class="panel-section view-section">
+    <h4>Views</h4>
+    <button class="view-btn" data-view="desks">Desks</button>
+    <button class="view-btn" data-view="overview">Overview</button>
+  </div>
     <!-- Reservation Section -->
   <div id="reservation-section">
     <h4>Desk Reservation</h4>
@@ -73,22 +77,8 @@
 </div>
 {% endif %}
 <!-- Main Grid -->
-<div class="grid-container">
-  <img src="{% static 'Assets/este.jpg' %}" alt="Background" class="background-image">
-
-  <button class="btn btn1">1</button>
-  <button class="btn btn2">2</button>
-  <button class="btn btn3">3</button>
-  <button class="btn btn4">4</button>
-  <button class="btn btn5">5</button>
-  <button class="btn btn6">6</button>
-  <button class="btn btn7">7</button>
-  <button class="btn btn8">8</button>
-  <button class="btn btn9">9</button>
-  <button class="btn btn10">10</button>
-  <button class="btn btn11">11</button>
-  <button class="btn btn12">12</button>
-  <button class="btn btn13">13</button>
+<div id="main-content">
+  {% include 'partials/desks.html' %}
 </div>
 
 <!-- === Health Popup === -->
@@ -107,4 +97,5 @@
 
 {% block extra_js %}
 <script src="{% static 'script/desk.js' %}"></script>
+<script src="{% static 'script/overview.js' %}"></script>
 {% endblock %}
