@@ -41,4 +41,13 @@ class Statistics(models.Model):
     sitting_time = models.IntegerField()
     position_changs = models.IntegerField()  
     date = models.DateTimeField()
+class PasswordResetRequest(models.Model):
+    user = models.ForeignKey(Users, on_delete=models.CASCADE)
+    new_password = models.CharField(max_length=100)  # Store hashed password
+    requested_at = models.DateTimeField(auto_now_add=True)
+    approved = models.BooleanField(default=False)
+    processed = models.BooleanField(default=False)  # To mark as handled
+    
+    class Meta:
+        ordering = ['-requested_at']
 
