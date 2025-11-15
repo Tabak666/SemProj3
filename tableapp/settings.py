@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'tableAPI',
     'rest_framework',
+    'cleaningAPI',
+    'core',
 ]
 
 MIDDLEWARE = [

@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 urlpatterns = [
@@ -10,5 +10,6 @@ urlpatterns = [
     path("", views.overview, name="overview"),
     path("desk/", views.desk, name="desk_view"),
     path('logout/', views.logout_view, name='logout'),
-    path('approvals/', views.approvals_view, name='approvals')
+    path('approvals/', views.approvals_view, name='approvals'),
+    path('api/', include('cleaningAPI.urls', namespace='cleaningAPI')),
 ]
