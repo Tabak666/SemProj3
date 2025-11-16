@@ -44,3 +44,46 @@ class RegistrationForm(forms.ModelForm):
 class LoginForm(forms.Form):
     username = forms.CharField(widget=forms.TextInput(attrs={'placeholder':'Username', 'required':'required'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder':'Password', 'required':'required'}))
+
+class ForgotPasswordForm(forms.Form):
+    username = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Username',
+            'required': 'required',
+            'id': 'id_username'
+        })
+    )
+    new_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'New Password',
+            'required': 'required',
+            'id': 'id_new_password'
+        })
+    )
+    repeat_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Repeat New Password',
+            'required': 'required',
+            'id': 'id_repeat_password'
+        })
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password = cleaned_data.get('new_password')
+        repeat_password = cleaned_data.get('repeat_password')
+        username = cleaned_data.get('username')
+
+        # Check if user exists
+        if username:
+            try:
+                Users.objects.get(username=username)
+            except Users.DoesNotExist:
+                raise ValidationError('User with this username does not exist.')
+
+        # Check if passwords match
+        if new_password and repeat_password:
+            if new_password != repeat_password:
+                raise ValidationError('Passwords do not match.')
+
+        return cleaned_data
