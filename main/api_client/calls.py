@@ -1,5 +1,5 @@
 import requests
-import models
+from . import desk_models
 session = requests.Session()
 
 session.headers.update({
@@ -19,7 +19,7 @@ def get_all_desks():
 def get_desk_by_id(id):
     url = apiUrl + "desks/" + id
     response = session.get(url)
-    return models.Desk.from_dict(response.json(),id)
+    return desk_models.Desk.from_dict(response.json(),id)
 
 def get_desk_category(id, category):
     url = apiUrl + "desks/" + id + "/" + category
@@ -45,7 +45,7 @@ def update_desk_height(id, value):
     #checks
     return update_desk_category(id,"state", {'position_mm': value*10})
 
-allDeskData:[models.Desk]= loadDesks()
+allDeskData:[desk_models.Desk]= loadDesks()
 
 
 for desk in allDeskData:
