@@ -5,7 +5,7 @@ import requests
 from .utils import get_desk_data, pair_user_with_desk, unpair_user
 from .models import UserTablePairs, Users, PasswordResetRequest
 from django.http import JsonResponse
-from .api_client.calls import get_all_desks, get_desk_by_id
+from .api_client.calls import loadDesks
 
 from .forms import RegistrationForm, LoginForm, ForgotPasswordForm
 def index(request):
@@ -130,6 +130,42 @@ def approvals_view(request):
 def dashboard_view(request):
     return render(request, 'dashboard.html')
 
+def dashboard_data(request):
+    if not request.session.get("user_id"):
+        return JsonResponse({"success": False, "message": "Not logged in"}, status=401)
+
+    user_id = request.session["user_id"]
+    pair = UserTablePairs.objects.filter(user_id=user_id, end_time__isnull=True).first()
+    desk_id = pair.desk_id if pair else None
+
+    desk_data = None
+    if desk_id:
+        for desk in loadDesks():  # <-- IMPORTANT
+            if desk.mac_address == desk_id:
+                desk_data = {
+                    "id": desk.mac_address,
+                    "name": desk.config.name,
+                    "position_mm": desk.state.position_mm,
+                    "speed_mms": desk.state.speed_mms,
+                    "status": desk.user,
+                }
+                break
+
+    metrics = {
+        "sitting_hours": 3.8,
+        "standing_hours": 1.9,
+        "changes": 14,
+        "health_score": 74,
+        "last_change_min_ago": 31,
+    }
+
+    return JsonResponse({
+        "success": True,
+        "desk_id": desk_id,
+        "desk_data": desk_data,
+        "metrics": metrics
+    })
+
 def load_view(request, view_name):
     if view_name == "desks":
         return render(request, "partials/desks.html")
@@ -141,10 +177,10 @@ def overview(request):
     return render(request, "partials/overview.html")
 
 def desk(request):
-    return render(request, "partials/desks.html")
     if not request.session.get('user_id'):
         return redirect('login')
-    return render(request, 'dashboard.html')
+    return render(request, "partials/desks.html")
+
 
 def pair_desk_view(request):
     if request.method != "POST" or not request.session.get("user_id"):
@@ -170,83 +206,6 @@ def unpair_desk_view(request):
         user = Users.objects.get(id=request.session["user_id"])
         unpair_user(user)
         return JsonResponse({"success": True, "message": "Unpaired from desk"})
-
-
-API_URL = "http://localhost:8001/api/v2/E9Y2LxT4g1hQZ7aD8nR3mWx5P0qK6pV7/desks"
-
-
-def get_desks_api(request):
-    if not request.session.get("user_id"):
-        return JsonResponse({"success": False, "message": "Not logged in"}, status=401)
-    
-    # Load pairing info from DB
-    user_pairs = UserTablePairs.objects.filter(end_time__isnull=True).values_list("user_id", "desk_id")
-    paired_desks = {desk_id: user_id for user_id, desk_id in user_pairs}
-
-    # Use API client to get desks
-    from api_client.calls import get_all_desks
-    desks = get_all_desks()  # returns list of Desk dataclasses
-
-    desk_list = []
-    for desk in desks:
-        desk_list.append({
-            "id": desk.mac_address,
-            "name": desk.config.name,
-            "status": desk.user,  # active/seated/standing
-            "position_mm": desk.state.position_mm,
-            "speed_mms": desk.state.speed_mms,
-            "paired_user": paired_desks.get(desk.mac_address),
-        })
-
-    return JsonResponse({"success": True, "desks": desk_list})
-
-
-def unpair_desk_view(request):
-    if request.method == "POST":
-        if not request.session.get("user_id"):
-            return JsonResponse({"success": False, "message": "Not logged in"})
-
-        user = Users.objects.get(id=request.session["user_id"])
-        unpair_user(user)
-        return JsonResponse({"success": True, "message": "Unpaired from desk"})
-
-
-API_URL = "http://localhost:8001/api/v2/E9Y2LxT4g1hQZ7aD8nR3mWx5P0qK6pV7/desks"
-
-def get_desks_api(request):
-    if not request.session.get("user_id"):
-        return JsonResponse({"success": False, "message": "Not logged in"}, status=401)
-    
-    try:
-        response = requests.get(API_URL)
-        response.raise_for_status()
-        desks_data = response.json()  # your JSON like desk_state.json
-    except requests.RequestException:
-        return JsonResponse({"success": False, "message": "Failed to fetch desks"}, status=500)
-    
-    # Load pairing info from DB
-    user_pairs = UserTablePairs.objects.filter(end_time__isnull=True).values_list("user_id", "desk_id")
-    paired_desks = {desk_id: user_id for user_id, desk_id in user_pairs}
-
-    desk_list = []
-    for mac, desk in desks_data.items():
-        if mac in ["current_time_s", "simulation_speed"]:
-            continue  # skip metadata
-
-        desk_info = desk.get("desk_data", {})
-        config = desk_info.get("config", {})
-        state = desk_info.get("state", {})
-
-        desk_list.append({
-            "id": mac,
-            "name": config.get("name"),
-            "status": desk.get("user", "available"),  # active/seated/standing
-            "position_mm": state.get("position_mm"),
-            "speed_mms": state.get("speed_mms"),
-            "paired_user": paired_desks.get(mac),  # will be None if free
-        })
-
-    return JsonResponse({"success": True, "desks": desk_list})
 
 def forgot_password_view(request):
     if request.method == 'POST':
