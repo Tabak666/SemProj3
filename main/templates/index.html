@@ -11,12 +11,12 @@
 
 <div class="side-panel">
   <h3>Control Panel</h3>
+  {% if request.session.user_id %}
   <div class="panel-section view-section">
     <h4>Views</h4>
     <button class="view-btn" data-view="desks">Desks</button>
     <button class="view-btn" data-view="overview">Overview</button>
   </div>
-
     <!-- Reservation Section -->
   <div id="reservation-section">
     <h4>Desk Reservation</h4>
@@ -74,9 +74,9 @@
       Show Health Recommendations
     </label>
   </div>
-
 </div>
-
+{% endif %}
+<!-- Main Grid -->
 <div id="main-content">
   {% include 'partials/desks.html' %}
 </div>
@@ -96,6 +96,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'script/desk.js' %}"></script>
+<script type="module" src="{% static 'script/desk.js' %}"></script>
+
 <script src="{% static 'script/overview.js' %}"></script>
 {% endblock %}
+

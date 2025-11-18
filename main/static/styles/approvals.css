@@ -566,3 +566,44 @@
         flex-direction: column-reverse;
     }
 }
+
+.stat-icon.password-reset {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+
+.password-reset-avatar {
+    background: linear-gradient(135deg, #5e35b1, #7e57c2) !important;
+}
+
+.status-badge.password-reset-badge {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.confirm-modal-icon.password-reset-icon {
+    background: linear-gradient(135deg, #5e35b1, #7e57c2);
+}
+
+.confirm-modal-icon.password-reset-icon i {
+    color: white;
+}
+
+.approvals-section + .approvals-section {
+    margin-top: 40px;
+}
+
+.confirm-modal-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--danger-color), #e35d6a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+}
+
+.confirm-modal-icon i {
+    font-size: 28px;
+    color: white;
+}
