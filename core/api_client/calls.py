@@ -67,11 +67,5 @@ def check_height_all():
         print(f"Desk id:{desk.mac_address} height: {desk.state.position_mm}")
 # #min height 680mm
 #max height 1320mm
-# # print(get_all_desks())
-
-
-check_height_all()
-# print(get_desk_by_id("00:ec:eb:50:c2:c8"))
-
 
 
