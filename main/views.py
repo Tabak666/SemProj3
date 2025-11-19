@@ -6,6 +6,7 @@ from .utils import get_desk_data, pair_user_with_desk, unpair_user
 from .models import UserTablePairs, Users, PasswordResetRequest
 from django.http import JsonResponse
 from core.api_client.calls import loadDesks, get_desk_by_id
+from django.core.cache import cache
 
 from .forms import RegistrationForm, LoginForm, ForgotPasswordForm
 def index(request):
@@ -127,51 +128,30 @@ def approvals_view(request):
     }
     return render(request, 'approvals.html', context)
 
+
+from main.models import UserTablePairs
+
 def dashboard_view(request):
     if not request.session.get('user_id'):
-        return redirect('index')  # or 'login'
-    return render(request, 'dashboard.html')
+        return redirect('login')
 
-
-
-def dashboard_data(request):
-    if not request.session.get("user_id"):
-        return JsonResponse({"success": False, "message": "Not logged in"}, status=401)
-
-    user_id = request.session["user_id"]
-    pair = UserTablePairs.objects.filter(user_id=user_id, end_time__isnull=True).first()
-    desk_id = pair.desk_id if pair else None
-
-    desk_data = None
-
-    if desk_id:
-        try:
-            # ONE fast API call to get desk state
-            desk = get_desk_by_id(desk_id)
-
-            desk_data = {
-                "id": desk.mac_address,
-                "name": desk.config.name,
-                "position_mm": desk.state.position_mm,
-                "speed_mms": desk.state.speed_mms,
-                "status": desk.user,
-            }
-        except Exception as e:
-            print("Desk fetch error:", e)
+    user = Users.objects.get(id=request.session['user_id'])
+    
+    # Correct field name is user_id
+    user_desk = UserTablePairs.objects.filter(user_id=user, end_time__isnull=True).first()
 
     metrics = {
-        "sitting_hours": 3.8,
+        "desk_id": user_desk.desk_id if user_desk else "N/A",
+        "sitting_hours": 3.8, 
         "standing_hours": 1.9,
         "changes": 14,
-        "health_score": 74,
         "last_change_min_ago": 31,
+        "health_score": 74
     }
 
-    return JsonResponse({
-        "success": True,
-        "desk_id": desk_id,
-        "desk_data": desk_data,
-        "metrics": metrics
+    return render(request, "dashboard.html", {
+        "metrics": metrics,
+        "user_desk": user_desk,
     })
 
 

@@ -15,6 +15,4 @@ urlpatterns = [
     path('forgot-password/', views.forgot_password_view, name='forgot_password'),
     path('pair_desk/', views.pair_desk_view, name='pair_desk'),
     path('unpair_desk/', views.unpair_desk_view, name='unpair_desk'),
-    path("dashboard_data/", views.dashboard_data, name="dashboard_data"),
-
 ]
