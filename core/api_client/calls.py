@@ -1,7 +1,8 @@
 import requests
-from . import desk_models
+from core.api_client.models import Desk
+# from models import Desk
 session = requests.Session()
-
+from time import sleep
 session.headers.update({
     "Content-Type": "application/json",
 })
@@ -10,7 +11,8 @@ api_key = "E9Y2LxT4g1hQZ7aD8nR3mWx5P0qK6pV7"
 
 apiUrl = f"http://127.0.0.1:8001/api/v2/{api_key}/"
 
-
+def test():
+    print("jello")
 def get_all_desks():
     url = apiUrl + "desks/"
     response = session.get(url)
@@ -19,7 +21,7 @@ def get_all_desks():
 def get_desk_by_id(id):
     url = apiUrl + "desks/" + id
     response = session.get(url)
-    return desk_models.Desk.from_dict(response.json(),id)
+    return Desk.from_dict(response.json(),id)
 
 def get_desk_category(id, category):
     url = apiUrl + "desks/" + id + "/" + category
@@ -41,20 +43,29 @@ def loadDesks():
     return deskList
 
 
+
 def update_desk_height(id, value):
     #checks
     return update_desk_category(id,"state", {'position_mm': value*10})
 
-allDeskData:[desk_models.Desk]= loadDesks()
 
+def toggle_clean_mode():
+    deskList  = loadDesks()
+    if (sum([(desk.state.position_mm) for desk in deskList])/len(deskList)) < 1200:
 
-for desk in allDeskData:
-    print(desk.state.position_mm)
-# update_desk_height('ee:62:5b:b8:73:1d',0)
-#max height 132cm
-#min height 
+        for desk in deskList:
+            update_desk_height(desk.mac_address,132)
+    else:
+        for desk in deskList:
+            update_desk_height(desk.mac_address,68)
+        #block the simulator from randomly moving the desks 
 
-# print(get_all_desks())
+def check_height_all():
+    deskList = loadDesks()
 
-print(get_desk_by_id("00:ec:eb:50:c2:c8"))
+    for desk in deskList:
+        print(f"Desk id:{desk.mac_address} height: {desk.state.position_mm}")
+# #min height 680mm
+#max height 1320mm
+
 

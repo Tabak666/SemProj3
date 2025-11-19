@@ -25,7 +25,16 @@ SECRET_KEY = 'django-insecure-k46=swd^04@lpt6q%qs^sp847gx(y@k3p(jx-@-jj$g21o^f-m
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    '192.168.*',
+    '192.168.49.1',
+    'localhost',
+    '10.187.245.29',        # Your PC's IP
+    '10.187.245.*',
+    '0.0.0.0',
+    '10.187.245.29',
+    '127.0.0.1',
+]
 
 
 # Application definition
@@ -42,6 +51,9 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'tableAPI',
     'rest_framework',
+    'cleaningAPI',
+    'core',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
