@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.contrib.auth.hashers import make_password
 GENDER_CHOICES = [
     ('M', 'Male'),
     ('F', 'Female'),
@@ -8,13 +8,16 @@ GENDER_CHOICES = [
 class Users(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    username = models.CharField(max_length=100)
+    username = models.CharField(max_length=100, unique=True)
     password = models.CharField(max_length=100)
     gender = models.CharField(max_length=100, choices=GENDER_CHOICES)
     height = models.IntegerField()
     activity_level = models.IntegerField(null=True, blank=True)
     role = models.CharField(max_length=20, default='user')
     approved = models.BooleanField(default=False)
+
+    def set_password(self, raw_password):
+        self.password = make_password(raw_password)
 
 class UserTablePairs(models.Model):
     user_id = models.ForeignKey(Users, on_delete=models.CASCADE)

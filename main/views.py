@@ -5,7 +5,7 @@ import requests
 from .utils import get_desk_data, pair_user_with_desk, unpair_user
 from .models import UserTablePairs, Users, PasswordResetRequest
 from django.http import JsonResponse
-from .api_client.calls import loadDesks
+from core.api_client.calls import loadDesks, get_desk_by_id
 
 from .forms import RegistrationForm, LoginForm, ForgotPasswordForm
 def index(request):
@@ -98,7 +98,7 @@ def approvals_view(request):
 
                 if action == 'approve':
                     # Update user password
-                    user.password = reset_request.new_password
+                    user.set_password(reset_request.new_password)
                     user.save()
                     
                     # Mark request as processed and approved
@@ -128,7 +128,11 @@ def approvals_view(request):
     return render(request, 'approvals.html', context)
 
 def dashboard_view(request):
+    if not request.session.get('user_id'):
+        return redirect('index')  # or 'login'
     return render(request, 'dashboard.html')
+
+
 
 def dashboard_data(request):
     if not request.session.get("user_id"):
@@ -139,17 +143,21 @@ def dashboard_data(request):
     desk_id = pair.desk_id if pair else None
 
     desk_data = None
+
     if desk_id:
-        for desk in loadDesks():  # <-- IMPORTANT
-            if desk.mac_address == desk_id:
-                desk_data = {
-                    "id": desk.mac_address,
-                    "name": desk.config.name,
-                    "position_mm": desk.state.position_mm,
-                    "speed_mms": desk.state.speed_mms,
-                    "status": desk.user,
-                }
-                break
+        try:
+            # ONE fast API call to get desk state
+            desk = get_desk_by_id(desk_id)
+
+            desk_data = {
+                "id": desk.mac_address,
+                "name": desk.config.name,
+                "position_mm": desk.state.position_mm,
+                "speed_mms": desk.state.speed_mms,
+                "status": desk.user,
+            }
+        except Exception as e:
+            print("Desk fetch error:", e)
 
     metrics = {
         "sitting_hours": 3.8,
@@ -165,6 +173,7 @@ def dashboard_data(request):
         "desk_data": desk_data,
         "metrics": metrics
     })
+
 
 def load_view(request, view_name):
     if view_name == "desks":
