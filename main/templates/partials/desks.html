@@ -1,21 +1,28 @@
-  
-  {% load static %}
-  
-  <!-- Main Grid -->
-  <div class="grid-container">
-    <img src="{% static 'Assets/este.jpg' %}" alt="Background" class="background-image">
-  
-    <button class="btn btn1">1</button>
-    <button class="btn btn2">2</button>
-    <button class="btn btn3">3</button>
-    <button class="btn btn4">5</button>
-    <button class="btn btn5">4</button>
-    <button class="btn btn6">6</button>
-    <button class="btn btn7">7</button>
-    <button class="btn btn8">8</button>
-    <button class="btn btn9">9</button>
-    <button class="btn btn10">10</button>
-    <button class="btn btn11">11</button>
-    <button class="btn btn12">12</button>
-    <button class="btn btn13">13</button>
-  </div>
+{% load static %}
+
+<div class="grid-container">
+    <img src="{% static 'Assets/este.jpg' %}" class="background-image" alt="Background">
+
+    {% for room, desks in rooms.items %}
+    <div class="room-wrapper" id="room-{{ room }}">
+        <h3>Room {{ room }}</h3>
+        <div class="room-block">
+            {% for entry in desks %}
+                {% if entry.desk %}
+                    <button class="btn btn{{ forloop.counter }}"
+                        data-desk-id="{{ entry.desk.mac_address }}"
+                        data-desk-number="{{ entry.number }}">
+                        {{ entry.number }}
+                    </button>
+                {% else %}
+                    <button class="btn btn{{ forloop.counter }} empty"
+                        data-desk-id=""
+                        data-desk-number="{{ entry.number }}">
+                        {{ entry.number }}
+                    </button>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>

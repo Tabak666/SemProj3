@@ -5,12 +5,19 @@ function initOverview() {
   console.log("Found room buttons:", roomButtons.length);
 
   roomButtons.forEach(button => {
+    // Remove previous event listeners if any
+    button.replaceWith(button.cloneNode(true));
+  });
+
+  const freshButtons = document.querySelectorAll(".overview-grid button");
+
+  freshButtons.forEach(button => {
     button.addEventListener("click", () => {
       console.log(`🟢 Room button clicked: ${button.dataset.label}`);
 
       const rect = button.getBoundingClientRect();
 
-      // === 1️⃣ ZOOM OVERLAY ===
+      // 1️⃣ Create zoom overlay
       const overlay = document.createElement("div");
       overlay.classList.add("zoom-overlay");
       Object.assign(overlay.style, {
@@ -24,56 +31,57 @@ function initOverview() {
         backgroundPosition: "center",
         borderRadius: "12px",
         zIndex: "9999",
-        transition: "all 1.5s ease-in-out"
+        transition: "all 0.8s ease-in-out"
       });
       document.body.appendChild(overlay);
 
-      // === 2️⃣ WHITE FADE OVERLAY ===
+      // 2️⃣ Create fade overlay
       const fadeOverlay = document.createElement("div");
       fadeOverlay.classList.add("fade-overlay");
       document.body.appendChild(fadeOverlay);
 
-      // Trigger both animations
+      // Trigger animations
       requestAnimationFrame(() => {
         overlay.style.left = "0";
         overlay.style.top = "0";
         overlay.style.width = "100vw";
         overlay.style.height = "100vh";
         overlay.style.borderRadius = "0";
-        fadeOverlay.classList.add("fade-in"); // fade to white *while zooming*
+        fadeOverlay.classList.add("fade-in");
       });
 
-      // === 3️⃣ When zoom animation finishes ===
-      overlay.addEventListener(
-        "transitionend",
-        () => {
-          console.log("🔁 Zoom complete — loading desks view...");
-          fetch("/load_view/desks/")
-            .then(response => response.text())
-            .then(html => {
-              const mainContent = document.getElementById("main-content");
-              if (mainContent) mainContent.innerHTML = html;
+      // 3️⃣ Wait for animation and load desks
+      setTimeout(() => {
+        const roomLabel = button.dataset.label;
+        console.log(`🔁 Loading desks for ${roomLabel}...`);
 
-              // short delay for smoother transition into desks
-              setTimeout(() => {
-                fadeOverlay.classList.remove("fade-in"); // fade *out* from white
-                setTimeout(() => fadeOverlay.remove(), 500); // remove after fade-out
-              }, 100); // small delay before fading out
+        fetch(`/load_view/desks/?room=${roomLabel}`)
+          .then(res => res.text())
+          .then(html => {
+            const mainContent = document.getElementById("main-content");
+            if (!mainContent) {
+              console.error("❌ #main-content not found!");
+              return;
+            }
+            mainContent.innerHTML = html;
 
-              overlay.remove();
-              console.log("✅ Desks view loaded dynamically");
-            })
-            .catch(err => console.error("❌ Error loading desks view:", err));
-        },
-        { once: true }
-      );
+            // Reinitialize overview buttons if needed
+            document.dispatchEvent(new Event("overviewLoaded"));
+
+            // Fade out
+            fadeOverlay.classList.remove("fade-in");
+            setTimeout(() => fadeOverlay.remove(), 500);
+            overlay.remove();
+
+            console.log(`✅ Desks view for ${roomLabel} loaded`);
+          })
+          .catch(err => console.error("❌ Error loading desks view:", err));
+      }, 800); // matches the overlay transition duration
     });
   });
 }
 
-document.addEventListener("DOMContentLoaded", initOverview);
-document.addEventListener("overviewLoaded", initOverview);
-
+// Floor selector change
 document.addEventListener("DOMContentLoaded", () => {
   const floorSelect = document.getElementById("floorSelect");
   const corridorLabel = document.getElementById("corridorLabel");
@@ -85,3 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+// Initialize overview
+document.addEventListener("DOMContentLoaded", initOverview);
+document.addEventListener("overviewLoaded", initOverview);

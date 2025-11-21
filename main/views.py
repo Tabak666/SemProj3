@@ -7,10 +7,38 @@ from .models import UserTablePairs, Users, PasswordResetRequest
 from django.http import JsonResponse
 from core.api_client.calls import loadDesks, get_desk_by_id
 from django.core.cache import cache
-
 from .forms import RegistrationForm, LoginForm, ForgotPasswordForm
+
 def index(request):
-    return render(request, 'index.html')
+    desks_api = cache.get("latest_desk_data") or []
+    room_names = ["A", "B", "C", "D"]
+    desks_per_room = 12
+    rooms = {name: [] for name in room_names}
+
+    desk_iter = iter(desks_api)
+    desk_number = 1
+
+    for room in room_names:
+        for i in range(desks_per_room):
+            try:
+                desk = next(desk_iter)
+            except StopIteration:
+                desk = None
+            rooms[room].append({
+                "desk": desk,
+                "number": desk_number if desk else None
+            })
+            if desk:
+                desk_number += 1
+
+    # Only send Room A as default
+    default_room = {'A': rooms['A']}
+
+    return render(request, "index.html", {
+        "rooms": default_room,
+        "highlight": "Room A"
+    })
+
 
 def login_view(request):
     form = LoginForm(request.POST or None)
@@ -154,14 +182,51 @@ def dashboard_view(request):
         "user_desk": user_desk,
     })
 
-
 def load_view(request, view_name):
+    desks_api = cache.get("latest_desk_data") or []
+    room_filter = request.GET.get("room")  # e.g., "Room A"
+
+    room_names = ["A", "B", "C", "D"]
+    desks_per_room = 12
+    rooms = {name: [] for name in room_names}
+
+    desk_iter = iter(desks_api)
+    desk_number = 1
+
+    for room_name in room_names:
+        for i in range(desks_per_room):
+            try:
+                desk = next(desk_iter)
+            except StopIteration:
+                desk = None  # room has no more desks
+            rooms[room_name].append({
+                "desk": desk,
+                "number": desk_number if desk else None
+            })
+            if desk:
+                desk_number += 1
+
+    # --- FILTER BY ROOM if requested ---
+    filtered_rooms = rooms
+    if room_filter:
+        # Convert "Room A" -> "A"
+        room_key = room_filter.split()[-1]
+        if room_key in rooms:
+            filtered_rooms = {room_key: rooms[room_key]}
+
+    context = {
+        "rooms": filtered_rooms,
+        "highlight": room_filter
+    }
+
     if view_name == "desks":
-        return render(request, "partials/desks.html")
+        return render(request, "partials/desks.html", context)
     elif view_name == "overview":
-        return render(request, "partials/overview.html")
-    else:
-        return render(request, "partials/desks.html")
+        return render(request, "partials/overview.html", context)
+
+    # fallback
+    return render(request, "partials/overview.html", context)
+
 def overview(request):
     return render(request, "partials/overview.html")
 
