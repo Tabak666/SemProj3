@@ -24,8 +24,17 @@
     <div id="statusMessage" class="status-message" aria-live="polite" role="status" style="display:none;"></div>
 
     <div id="reservationActions" style="display:none; margin-bottom:45px;">
-      <button id="pairBtn">Pair (Now)</button>
-      <button id="unpairBtn" disabled>Unpair</button>
+      <form id="pairForm" method="POST" action="{% url 'pair_desk' %}">
+      {% csrf_token %}
+          <input type="hidden" name="desk_id" id="pairDeskId">
+          <button type="submit" id="pairBtn">Pair (Now)</button>
+      </form>
+
+      <form id="unpairForm" method="POST" action="{% url 'unpair_desk' %}">
+          {% csrf_token %}
+          <button type="submit" id="unpairBtn" disabled>Unpair</button>
+      </form>
+
       <button id="showBooking">Book for Later</button>
 
       <div id="bookingForm" style="display:none; margin-top:15px; margin-bottom:15px;">
@@ -97,6 +106,9 @@
 
 {% block extra_js %}
 <script type="module" src="{% static 'script/desk.js' %}"></script>
+<script>
+  const USER_HEIGHT_CM = {{ user_height|default:"176" }};
+</script>
 
 <script src="{% static 'script/overview.js' %}"></script>
 {% endblock %}

@@ -37,19 +37,3 @@ class PasswordResetRequest(models.Model):
     class Meta:
         ordering = ['-requested_at']
 
-class Room(models.Model):
-    name = models.CharField(max_length=50)
-    floor = models.IntegerField(default=1)
-
-    def __str__(self):
-        return f"{self.name} (Floor {self.floor})"
-    
-
-class DeskLayout(models.Model):
-    desk_number = models.IntegerField()      # 1..12 per room
-    room = models.ForeignKey(Room, on_delete=models.CASCADE)
-    x = models.IntegerField(default=0)       # optional: coordinates
-    y = models.IntegerField(default=0)
-
-    def __str__(self):
-        return f"Desk {self.desk_number} in {self.room}"

@@ -8,6 +8,9 @@ from django.http import JsonResponse
 from core.api_client.calls import loadDesks, get_desk_by_id
 from django.core.cache import cache
 from .forms import RegistrationForm, LoginForm, ForgotPasswordForm
+from django.views.decorators.http import require_GET
+
+
 
 def index(request):
     desks_api = cache.get("latest_desk_data") or []
@@ -34,9 +37,15 @@ def index(request):
     # Only send Room A as default
     default_room = {'A': rooms['A']}
 
+    user_height = None
+    if request.session.get('user_id'):
+        user = Users.objects.get(id=request.session['user_id'])
+        user_height = user.height
+
     return render(request, "index.html", {
         "rooms": default_room,
-        "highlight": "Room A"
+        "highlight": "Room A",
+        "user_height": user_height
     })
 
 
@@ -299,3 +308,17 @@ def forgot_password_view(request):
         form = ForgotPasswordForm()
     
     return render(request, 'forgot_password.html', {'form': form})
+
+@require_GET
+def user_desk_status(request, desk_id):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"is_paired": False})
+
+    is_paired = UserTablePairs.objects.filter(
+        user_id=user_id, 
+        desk_id=desk_id, 
+        end_time__isnull=True
+    ).exists()
+
+    return JsonResponse({"is_paired": is_paired})

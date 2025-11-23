@@ -15,4 +15,6 @@ urlpatterns = [
     path('forgot-password/', views.forgot_password_view, name='forgot_password'),
     path('pair_desk/', views.pair_desk_view, name='pair_desk'),
     path('unpair_desk/', views.unpair_desk_view, name='unpair_desk'),
+    path("api/user-status/<str:desk_id>/", views.user_desk_status),
+
 ]
