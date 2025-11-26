@@ -9,6 +9,8 @@ from core.api_client.calls import loadDesks, get_desk_by_id
 from django.core.cache import cache
 from .forms import RegistrationForm, LoginForm, ForgotPasswordForm
 from django.views.decorators.http import require_GET
+from django.utils import timezone
+
 
 
 
@@ -165,8 +167,20 @@ def approvals_view(request):
     }
     return render(request, 'approvals.html', context)
 
+def admin_force_unpair(request):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Invalid request"})
 
-from main.models import UserTablePairs
+    if request.session.get("role") != "admin":
+        return JsonResponse({"success": False, "message": "Not authorized"})
+
+    desk_id = request.POST.get("desk_id")
+    if not desk_id:
+        return JsonResponse({"success": False, "message": "No desk selected"})
+
+    UserTablePairs.objects.filter(desk_id=desk_id, end_time__isnull=True).update(end_time=timezone.now())
+    return JsonResponse({"success": True, "message": f"Desk {desk_id} unpaired"})
+
 
 def dashboard_view(request):
     if not request.session.get('user_id'):
@@ -244,7 +258,6 @@ def desk(request):
         return redirect('login')
     return render(request, "partials/desks.html")
 
-
 def pair_desk_view(request):
     if request.method != "POST" or not request.session.get("user_id"):
         return JsonResponse({"success": False, "message": "Not logged in"})
@@ -254,21 +267,41 @@ def pair_desk_view(request):
     if not desk_id:
         return JsonResponse({"success": False, "message": "No desk selected"})
 
-    # Check if desk is already paired
-    if UserTablePairs.objects.filter(desk_id=desk_id, end_time__isnull=True).exists():
-        return JsonResponse({"success": False, "message": "Desk already occupied"})
+    # Check if desk is already occupied
+    existing = UserTablePairs.objects.filter(desk_id=desk_id, end_time__isnull=True).first()
+    if existing:
+        return JsonResponse({
+            "success": False,
+            "message": f"Desk already occupied by {existing.user_id.username}"
+        })
 
-    pair_user_with_desk(user, desk_id)
+    # End any active desk for this user
+    UserTablePairs.objects.filter(user_id=user, end_time__isnull=True).update(end_time=timezone.now())
+
+    # Create new pairing
+    UserTablePairs.objects.create(user_id=user, desk_id=desk_id, start_time=timezone.now())
+
     return JsonResponse({"success": True, "message": f"Paired with desk {desk_id}"})
 
 def unpair_desk_view(request):
-    if request.method == "POST":
-        if not request.session.get("user_id"):
-            return JsonResponse({"success": False, "message": "Not logged in"})
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Invalid request"})
 
-        user = Users.objects.get(id=request.session["user_id"])
-        unpair_user(user)
-        return JsonResponse({"success": True, "message": "Unpaired from desk"})
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"success": False, "message": "Not logged in"})
+
+    user = Users.objects.get(id=user_id)
+    # End the active desk for this user
+    pairing = UserTablePairs.objects.filter(user_id=user, end_time__isnull=True).first()
+    if not pairing:
+        return JsonResponse({"success": False, "message": "No active desk to unpair"})
+
+    pairing.end_time = timezone.now()
+    pairing.save()
+
+    return JsonResponse({"success": True, "message": "Unpaired from desk"})
+
 
 def forgot_password_view(request):
     if request.method == 'POST':
@@ -322,3 +355,10 @@ def user_desk_status(request, desk_id):
     ).exists()
 
     return JsonResponse({"is_paired": is_paired})
+
+@require_GET
+def desks_status_api(request):
+    # Get all active pairings
+    active_pairs = UserTablePairs.objects.filter(end_time__isnull=True)
+    data = {p.desk_id: {"user": p.user_id.username} for p in active_pairs}
+    return JsonResponse(data)

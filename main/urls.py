@@ -16,5 +16,5 @@ urlpatterns = [
     path('pair_desk/', views.pair_desk_view, name='pair_desk'),
     path('unpair_desk/', views.unpair_desk_view, name='unpair_desk'),
     path("api/user-status/<str:desk_id>/", views.user_desk_status, name="user_desk_status"),
-
+    path("api/desks_status/", views.desks_status_api, name="desks_status_api"),
 ]

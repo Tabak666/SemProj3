@@ -769,3 +769,15 @@ button[disabled] {
 .corridor::after {
   bottom: -5px;
 }
+
+.grid-container .btn.normal {
+    background-image: url("/static/Assets/desk.svg");
+}
+
+.grid-container .btn.occupied {
+    background-image: url("/static/Assets/occupied.svg");
+}
+
+.grid-container .btn.broken {
+    background-image: url("/static/Assets/broken.svg");
+}

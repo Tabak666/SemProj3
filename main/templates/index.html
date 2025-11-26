@@ -105,10 +105,10 @@
 {% endblock %}
 
 {% block extra_js %}
-<script type="module" src="{% static 'script/desk.js' %}"></script>
 <script>
   const USER_HEIGHT_CM = {{ user_height|default:"176" }};
 </script>
+<script type="module" src="{% static 'script/desk.js' %}"></script>
 
 <script src="{% static 'script/overview.js' %}"></script>
 {% endblock %}
