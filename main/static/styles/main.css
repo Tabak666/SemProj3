@@ -781,3 +781,11 @@ button[disabled] {
 .grid-container .btn.broken {
     background-image: url("/static/Assets/broken.svg");
 }
+.grid-container .btn.selected {
+  border-color: #327AD9 !important;
+  border-width: 4px !important;
+  box-shadow: 0 0 15px rgba(50, 122, 217, 0.6) !important; /* Glow effect */
+  transform: scale(1.1) !important; 
+  z-index: 10 !important;
+  background-color: rgba(255, 255, 255, 0.9);
+}

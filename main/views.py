@@ -29,7 +29,7 @@ def index(request):
                 desk = None
             rooms[room].append({
                 "desk": desk,
-                "number": desk_number if desk else ""  # Changed None to ""
+                "number": desk_number if desk else ""
             })
             if desk:
                 desk_number += 1
@@ -37,15 +37,26 @@ def index(request):
     # Only send Room A as default
     default_room = {'A': rooms['A']}
 
-    # Default height if not logged in
+    # Default values
     user_height = 176 
+    active_desk_id = None
     
     if request.session.get('user_id'):
         try:
             user = Users.objects.get(id=request.session['user_id'])
             user_height = user.height
+            
+            # Check if user is already paired with a desk
+            active_pair = UserTablePairs.objects.filter(
+                user_id=user, 
+                end_time__isnull=True
+            ).first()
+            
+            if active_pair:
+                active_desk_id = active_pair.desk_id
+                
         except Users.DoesNotExist:
-            pass # Keep default
+            pass
 
     # Calculate recommended heights
     rec_sit = round(user_height / 2.48)
@@ -56,7 +67,8 @@ def index(request):
         "highlight": "Room A",
         "user_height": user_height,
         "rec_sit": rec_sit,
-        "rec_stand": rec_stand
+        "rec_stand": rec_stand,
+        "active_desk_id": active_desk_id  # Pass this to template
     })
 
 
@@ -197,7 +209,6 @@ def dashboard_view(request):
 
     user = Users.objects.get(id=request.session['user_id'])
     
-    # Correct field name is user_id
     user_desk = UserTablePairs.objects.filter(user_id=user, end_time__isnull=True).first()
 
     metrics = {
@@ -216,7 +227,7 @@ def dashboard_view(request):
 
 def load_view(request, view_name):
     desks_api = cache.get("latest_desk_data") or []
-    room_filter = request.GET.get("room")  # e.g., "Room A"
+    room_filter = request.GET.get("room")
 
     room_names = ["A", "B", "C", "D"]
     desks_per_room = 12
@@ -230,18 +241,16 @@ def load_view(request, view_name):
             try:
                 desk = next(desk_iter)
             except StopIteration:
-                desk = None  # room has no more desks
+                desk = None
             rooms[room_name].append({
                 "desk": desk,
-                "number": desk_number if desk else ""  # Changed None to ""
+                "number": desk_number if desk else ""
             })
             if desk:
                 desk_number += 1
 
-    # --- FILTER BY ROOM if requested ---
     filtered_rooms = rooms
     if room_filter:
-        # Convert "Room A" -> "A"
         room_key = room_filter.split()[-1]
         if room_key in rooms:
             filtered_rooms = {room_key: rooms[room_key]}
@@ -256,7 +265,6 @@ def load_view(request, view_name):
     elif view_name == "overview":
         return render(request, "partials/overview.html", context)
 
-    # fallback
     return render(request, "partials/overview.html", context)
 
 def overview(request):
@@ -276,7 +284,6 @@ def pair_desk_view(request):
     if not desk_id:
         return JsonResponse({"success": False, "message": "No desk selected"})
 
-    # Check if desk is already occupied
     existing = UserTablePairs.objects.filter(desk_id=desk_id, end_time__isnull=True).first()
     if existing:
         return JsonResponse({
@@ -284,10 +291,7 @@ def pair_desk_view(request):
             "message": f"Desk already occupied by {existing.user_id.username}"
         })
 
-    # End any active desk for this user
     UserTablePairs.objects.filter(user_id=user, end_time__isnull=True).update(end_time=timezone.now())
-
-    # Create new pairing
     UserTablePairs.objects.create(user_id=user, desk_id=desk_id, start_time=timezone.now())
 
     return JsonResponse({"success": True, "message": f"Paired with desk {desk_id}"})
@@ -301,7 +305,6 @@ def unpair_desk_view(request):
         return JsonResponse({"success": False, "message": "Not logged in"})
 
     user = Users.objects.get(id=user_id)
-    # End the active desk for this user
     pairing = UserTablePairs.objects.filter(user_id=user, end_time__isnull=True).first()
     if not pairing:
         return JsonResponse({"success": False, "message": "No active desk to unpair"})
@@ -322,7 +325,6 @@ def forgot_password_view(request):
             try:
                 user = Users.objects.get(username=username)
                 
-                # Check if there's already a pending request for this user
                 existing_request = PasswordResetRequest.objects.filter(
                     user=user, 
                     processed=False
@@ -332,7 +334,6 @@ def forgot_password_view(request):
                     messages.warning(request, 'You already have a pending password reset request.')
                     return redirect('forgot_password')
                 
-                # Create a new password reset request
                 hashed_password = make_password(new_password)
                 PasswordResetRequest.objects.create(
                     user=user,
@@ -367,17 +368,12 @@ def user_desk_status(request, desk_id):
 
 @require_GET
 def desks_status_api(request):
-    # Get all active pairings
     active_pairs = UserTablePairs.objects.filter(end_time__isnull=True)
     data = {p.desk_id: {"user": p.user_id.username} for p in active_pairs}
     return JsonResponse(data)
 
 @require_POST
 def set_desk_height(request):
-    """
-    API endpoint to set the height of a desk.
-    Verifies that the logged-in user is currently paired with the desk.
-    """
     if not request.session.get('user_id'):
         return JsonResponse({"success": False, "message": "Not logged in"}, status=401)
 
@@ -388,7 +384,6 @@ def set_desk_height(request):
     if not desk_id or not height:
         return JsonResponse({"success": False, "message": "Missing parameters"}, status=400)
 
-    # Verify pairing
     is_paired = UserTablePairs.objects.filter(
         user_id=user_id, 
         desk_id=desk_id, 
@@ -399,7 +394,6 @@ def set_desk_height(request):
         return JsonResponse({"success": False, "message": "You are not paired with this desk"}, status=403)
 
     try:
-        # Calls the core API client to update the simulator/hardware
         update_desk_height(desk_id, int(height))
         return JsonResponse({"success": True, "message": f"Height set to {height}cm"})
     except Exception as e:

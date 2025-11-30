@@ -90,6 +90,7 @@
 {% block extra_js %}
 <script>
   const USER_HEIGHT_CM = {{ user_height|default:"176" }};
+  const INITIAL_DESK_ID = "{{ active_desk_id|default:'' }}";
 </script>
 <script type="module" src="{% static 'script/desk.js' %}"></script>
 

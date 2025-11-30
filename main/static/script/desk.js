@@ -3,7 +3,6 @@
 // --------------------------- Utilities ---------------------------
 function safeGet(id) { return document.getElementById(id); }
 
-// CSRF helper
 function getCookie(name) {
   const v = document.cookie.split('; ').find(row => row.startsWith(name + '='));
   return v ? decodeURIComponent(v.split('=')[1]) : null;
@@ -230,18 +229,21 @@ const bookEnd = safeGet("bookEnd");
 
 window.desks = window.desks || {};
 
-document.getElementById("main-content")?.addEventListener("click", (e) => {
-  const btn = e.target.closest(".btn");
-  if (!btn) return;
-
-  const deskId = btn.dataset.deskId;
-  if (!deskId) return;
+function activateDeskPanel(deskId) {
+  // Visual highlight: Remove from all, add to current
+  document.querySelectorAll('.grid-container .btn').forEach(b => b.classList.remove('selected'));
+  const activeBtn = document.querySelector(`.grid-container .btn[data-desk-id="${deskId}"]`);
+  if (activeBtn) {
+      activeBtn.classList.add('selected');
+  }
 
   const selectedDesk = safeGet("selectedDesk");
-  selectedDesk && (selectedDesk.textContent = `Selected Desk: ${deskId}`);
+  if (selectedDesk) selectedDesk.textContent = `Selected Desk: ${deskId}`;
 
-  if (reservationActions) reservationActions.style.display = "block";
-  if (reservationActions) reservationActions.dataset.currentDesk = deskId;
+  if (reservationActions) {
+      reservationActions.style.display = "block";
+      reservationActions.dataset.currentDesk = deskId;
+  }
 
   if (deskControls) deskControls.style.display = "none";
 
@@ -255,10 +257,25 @@ document.getElementById("main-content")?.addEventListener("click", (e) => {
       if (deskControls) {
           deskControls.style.display = isPaired ? "block" : "none";
       }
+      
+      if (isPaired) {
+          window.desks = window.desks || {};
+          window.desks[deskId] = { status: "paired", start: new Date().toLocaleString() };
+      }
     })
     .catch(err => {
       console.warn("user-status check failed", err);
     });
+}
+
+document.getElementById("main-content")?.addEventListener("click", (e) => {
+  const btn = e.target.closest(".btn");
+  if (!btn) return;
+
+  const deskId = btn.dataset.deskId;
+  if (!deskId) return;
+
+  activateDeskPanel(deskId);
 });
 
 // Pair desk (POST)
@@ -350,7 +367,6 @@ function initViewButtons() {
       const view = button.dataset.view;
       let url = `/load_view/${view}/`;
 
-      // ✅ KEY FIX: Load the last active room from storage if clicking "Desks"
       if (view === 'desks') {
           const storedRoom = sessionStorage.getItem("lastDeskRoom");
           if (storedRoom) {
@@ -374,36 +390,33 @@ function initViewButtons() {
 initViewButtons();
 
 document.addEventListener("DOMContentLoaded", () => {
+  ensureElementListeners();
+  
   if (!document.querySelector(".view-btn.active")) {
     const btn = document.querySelector('.view-btn[data-view="desks"]');
     if (btn) btn.classList.add("active");
   }
+
+  if (typeof INITIAL_DESK_ID !== 'undefined' && INITIAL_DESK_ID) {
+      activateDeskPanel(INITIAL_DESK_ID);
+  }
 });
 
-// --------------------------- Sync State Logic ---------------------------
-// This function constantly ensures the sidebar state matches what is actually on screen
 function syncStateWithContent() {
     const roomWrapper = document.querySelector(".room-wrapper");
-    
-    // If a room is visible on screen...
     if (roomWrapper) {
-        // 1. Force sidebar to "Desks" if it isn't already
         const desksBtn = document.querySelector('.view-btn[data-view="desks"]');
         if (desksBtn && !desksBtn.classList.contains("active")) {
             document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
             desksBtn.classList.add("active");
         }
-
-        // 2. Save the visible room to storage
         const roomId = roomWrapper.id.replace(/^room-/, "");
         if (roomId) {
             sessionStorage.setItem("lastDeskRoom", roomId);
         }
     }
 }
-// Run this check frequently to catch any state drift (e.g. from overview.js navigation)
 setInterval(syncStateWithContent, 1000);
-
 
 // --------------------------- Auto-refresh logic ---------------------------
 async function autoRefreshDesks() {
@@ -431,8 +444,14 @@ async function autoRefreshDesks() {
     initViewButtons();
     document.dispatchEvent(new Event("overviewLoaded"));
 
+    // ✅ FIX: Re-apply selection visual state after HTML replacement
     const selectedDeskId = reservationActions?.dataset?.currentDesk;
     if (selectedDeskId) {
+        const activeBtn = document.querySelector(`.grid-container .btn[data-desk-id="${selectedDeskId}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('selected');
+        }
+
       fetch(`/api/user-status/${encodeURIComponent(selectedDeskId)}/`)
         .then(r => r.json())
         .then(data => {
@@ -450,10 +469,6 @@ async function autoRefreshDesks() {
 }
 
 setInterval(autoRefreshDesks, 3000);
-
-document.addEventListener("DOMContentLoaded", () => {
-  ensureElementListeners();
-});
 
 function refreshDeskStatus() {
   fetch("/api/desks_status/")
