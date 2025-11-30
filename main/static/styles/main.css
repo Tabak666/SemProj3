@@ -789,3 +789,36 @@ button[disabled] {
   z-index: 10 !important;
   background-color: rgba(255, 255, 255, 0.9);
 }
+.loading-overlay {
+  position: absolute; /* positioned relative to .side-panel */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: 1000; /* Above everything in the panel */
+  display: none; /* Hidden by default */
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: inherit;
+  backdrop-filter: blur(2px);
+}
+
+.loading-overlay.active {
+  display: flex;
+}
+
+.loading-overlay p {
+  margin-top: 15px;
+  font-weight: 600;
+  color: #327AD9;
+  font-size: 1.1rem;
+}
+
+/* Spinner styling (using Bootstrap classes, but custom sizing) */
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+  border-width: 0.25em;
+}

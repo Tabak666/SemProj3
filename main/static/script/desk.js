@@ -1,4 +1,3 @@
-// desk.js — unified, robust, auto-refreshing script
 
 // --------------------------- Utilities ---------------------------
 function safeGet(id) { return document.getElementById(id); }
@@ -9,7 +8,7 @@ function getCookie(name) {
 }
 const CSRF_TOKEN = getCookie('csrftoken');
 
-// --------------------------- Height / Popup ---------------------------
+// --------------------------- Height / Popup / Loading ---------------------------
 const slider = safeGet("heightSlider");
 const valueLabel = safeGet("heightValue");
 const popup = safeGet("healthPopup");
@@ -18,6 +17,19 @@ const acceptBtn = safeGet("acceptBtn");
 const ignoreBtn = safeGet("ignoreBtn");
 const toggleHealth = safeGet("toggleHealth");
 const deskControls = safeGet("desk-controls");
+
+// New Elements for Confirmation & Loading
+const confirmModalEl = safeGet("moveConfirmModal");
+const confirmHeightVal = safeGet("confirmHeightVal");
+const confirmMoveBtn = safeGet("confirmMoveBtn");
+const loadingOverlay = safeGet("deskLoadingOverlay");
+
+let pendingMoveHeight = null;
+let confirmModal = null;
+
+if (confirmModalEl && typeof bootstrap !== 'undefined') {
+    confirmModal = new bootstrap.Modal(confirmModalEl);
+}
 
 if (typeof USER_HEIGHT_CM === 'undefined') {
   window.USER_HEIGHT_CM = 176;
@@ -84,11 +96,84 @@ function showSittingReminder() {
   showPopup();
 }
 
-// --- Backend Height Update Helper ---
-function updateBackendHeight(deskId, heightVal) {
+// --- MOVEMENT MONITORING LOGIC ---
+function monitorDeskMovement(deskId, targetHeight) {
+    let attempts = 0;
+    const maxAttempts = 60; // Max 60 seconds timeout
+
+    // Update overlay text to show we are waiting
+    if (loadingOverlay) {
+        const text = loadingOverlay.querySelector('p');
+        if (text) text.textContent = "Moving desk... please wait";
+    }
+
+    const poll = setInterval(() => {
+        attempts++;
+        fetch(`/api/user-status/${encodeURIComponent(deskId)}/`)
+        .then(r => r.json())
+        .then(data => {
+            const currentH = data.current_height;
+            const isMoving = data.is_moving;
+
+            // Success Condition 1: Reached target height (exact or +/- 1cm)
+            if (currentH !== null && Math.abs(currentH - targetHeight) <= 1) {
+                stopLoading(`Desk reached ${targetHeight}cm`, "success", targetHeight);
+            } 
+            // Stop Condition 2: Desk stopped moving (and it wasn't just starting)
+            // We wait > 2 attempts to ensure the simulator had time to start the motor
+            else if (isMoving === false && attempts > 2) { 
+                stopLoading(`Desk stopped at ${currentH}cm`, "warning", currentH);
+            }
+            
+            // Timeout
+            if (attempts >= maxAttempts) {
+                stopLoading("Movement timed out", "error", currentH);
+            }
+        })
+        .catch(err => console.error("Polling error", err));
+    }, 1000);
+
+    function stopLoading(msg, type, finalHeight) {
+        clearInterval(poll);
+        if (loadingOverlay) loadingOverlay.classList.remove("active");
+        setStatusMessage(msg, type);
+        
+        // Sync slider to where it actually ended up
+        if (finalHeight && slider && valueLabel) {
+            slider.value = finalHeight;
+            valueLabel.textContent = finalHeight;
+        }
+    }
+}
+
+// 1. Request Movement (Triggers Modal)
+function requestDeskMovement(height) {
+    if (!confirmModal) {
+        if(confirm(`Are you sure you want to move the desk to ${height}cm?`)) {
+            executeDeskMovement(height);
+        }
+        return;
+    }
+    
+    pendingMoveHeight = height;
+    if (confirmHeightVal) confirmHeightVal.textContent = height;
+    confirmModal.show();
+}
+
+// 2. Execute Movement (Triggers API + Loading + Monitoring)
+function executeDeskMovement(height) {
+    const deskId = reservationActions?.dataset?.currentDesk;
+    if (!deskId) return;
+
+    if (loadingOverlay) {
+        loadingOverlay.classList.add("active");
+        const text = loadingOverlay.querySelector('p');
+        if(text) text.textContent = "Sending command...";
+    }
+
     const formData = new FormData();
     formData.append("desk_id", deskId);
-    formData.append("height", heightVal);
+    formData.append("height", height);
 
     fetch("/api/set_desk_height/", {
         method: "POST",
@@ -98,28 +183,46 @@ function updateBackendHeight(deskId, heightVal) {
     .then(res => res.json())
     .then(data => {
         if (!data.success) {
+            if (loadingOverlay) loadingOverlay.classList.remove("active");
             setStatusMessage(data.message, "error");
+        } else {
+            // ✅ SUCCESS: Now wait for it to actually move
+            monitorDeskMovement(deskId, height);
         }
     })
-    .catch(err => console.error("Height update failed", err));
+    .catch(err => {
+        console.error("Height update failed", err);
+        if (loadingOverlay) loadingOverlay.classList.remove("active");
+        setStatusMessage("Connection failed", "error");
+    });
 }
+
+// 3. Confirm Button Listener
+if (confirmMoveBtn) {
+    confirmMoveBtn.addEventListener("click", () => {
+        if (pendingMoveHeight !== null) {
+            executeDeskMovement(pendingMoveHeight);
+            confirmModal.hide();
+        }
+    });
+}
+
 
 // --- Slider logic ---
 if (slider && valueLabel && toggleHealth) {
-  let debounceTimer;
-
+  
   slider.addEventListener("input", () => {
-    const height = parseInt(slider.value);
-    valueLabel.textContent = height;
+      valueLabel.textContent = slider.value;
+  });
 
+  slider.addEventListener("change", () => {
+    const height = parseInt(slider.value);
+    
     const hasActiveDesk = Object.values(window.desks || {}).some(d => d.status === "booked" || d.status === "paired");
     const deskId = reservationActions?.dataset?.currentDesk;
     
     if (deskId && deskControls && deskControls.style.display !== "none") {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            updateBackendHeight(deskId, height);
-        }, 300);
+        requestDeskMovement(height);
     }
 
     if (!hasActiveDesk || !toggleHealth.checked) {
@@ -162,28 +265,26 @@ if (slider && valueLabel && toggleHealth) {
   });
 }
 
-// Popup action buttons
 acceptBtn && acceptBtn.addEventListener("click", () => {
+  let targetH = slider.value;
   if (currentRecommendation === "low") {
-    slider.value = sittingHeight;
-    valueLabel.textContent = sittingHeight;
+    targetH = sittingHeight;
   } else if (currentRecommendation === "high" || currentRecommendation === "sittingReminder") {
-    slider.value = standingHeight;
-    valueLabel.textContent = standingHeight;
+    targetH = standingHeight;
   } else if (currentRecommendation === "standingChoice") {
-    slider.value = sittingHeight;
-    valueLabel.textContent = sittingHeight;
+    targetH = sittingHeight;
   }
-  slider.dispatchEvent(new Event('input'));
   hidePopup();
+  requestDeskMovement(targetH);
 });
+
 ignoreBtn && ignoreBtn.addEventListener("click", () => {
   if (currentRecommendation === "standingChoice") {
-    slider.value = standingHeight;
-    valueLabel.textContent = standingHeight;
-    slider.dispatchEvent(new Event('input'));
+    hidePopup();
+    requestDeskMovement(standingHeight);
+  } else {
+    hidePopup();
   }
-  hidePopup();
 });
 
 // --------------------------- Profiles / Config / Status ---------------------------
@@ -192,14 +293,8 @@ document.querySelectorAll(".profile-btn").forEach(btn => {
     const h = btn.dataset.height;
     const deskId = reservationActions?.dataset?.currentDesk;
 
-    if (slider && valueLabel) {
-      slider.value = h;
-      valueLabel.textContent = h;
-      slider.dispatchEvent(new Event('input'));
-    } else {
-        if (deskId && deskControls && deskControls.style.display !== "none") {
-            updateBackendHeight(deskId, h);
-        }
+    if (deskId && deskControls && deskControls.style.display !== "none") {
+        requestDeskMovement(h);
     }
   });
 });
@@ -230,7 +325,6 @@ const bookEnd = safeGet("bookEnd");
 window.desks = window.desks || {};
 
 function activateDeskPanel(deskId) {
-  // Visual highlight: Remove from all, add to current
   document.querySelectorAll('.grid-container .btn').forEach(b => b.classList.remove('selected'));
   const activeBtn = document.querySelector(`.grid-container .btn[data-desk-id="${deskId}"]`);
   if (activeBtn) {
@@ -256,6 +350,11 @@ function activateDeskPanel(deskId) {
 
       if (deskControls) {
           deskControls.style.display = isPaired ? "block" : "none";
+          
+          if (isPaired && data.current_height && slider && valueLabel) {
+              slider.value = data.current_height;
+              valueLabel.textContent = data.current_height;
+          }
       }
       
       if (isPaired) {
@@ -402,14 +501,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+// --------------------------- Sync State Logic ---------------------------
 function syncStateWithContent() {
     const roomWrapper = document.querySelector(".room-wrapper");
+    
     if (roomWrapper) {
         const desksBtn = document.querySelector('.view-btn[data-view="desks"]');
         if (desksBtn && !desksBtn.classList.contains("active")) {
             document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
             desksBtn.classList.add("active");
         }
+
         const roomId = roomWrapper.id.replace(/^room-/, "");
         if (roomId) {
             sessionStorage.setItem("lastDeskRoom", roomId);
@@ -417,6 +519,7 @@ function syncStateWithContent() {
     }
 }
 setInterval(syncStateWithContent, 1000);
+
 
 // --------------------------- Auto-refresh logic ---------------------------
 async function autoRefreshDesks() {
@@ -444,7 +547,7 @@ async function autoRefreshDesks() {
     initViewButtons();
     document.dispatchEvent(new Event("overviewLoaded"));
 
-    // ✅ FIX: Re-apply selection visual state after HTML replacement
+    // Re-apply selection visual state after HTML replacement
     const selectedDeskId = reservationActions?.dataset?.currentDesk;
     if (selectedDeskId) {
         const activeBtn = document.querySelector(`.grid-container .btn[data-desk-id="${selectedDeskId}"]`);
