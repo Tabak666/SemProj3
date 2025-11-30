@@ -1,0 +1,372 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Approvals - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'styles/approvals.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="approvals-container">
+    <div class="page-header">
+        <h1>
+            <span class="icon">👥</span>
+            Admin Approvals
+        </h1>
+        <p>Review and manage pending user registrations and password reset requests</p>
+    </div>
+
+    {% if messages %}
+    <div class="messages-container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" role="alert">
+            <span class="alert-icon">
+                {% if message.tags == 'error' %}⚠️{% elif message.tags == 'success' %}✓{% elif message.tags == 'warning' %}⚡{% else %}ℹ️{% endif %}
+            </span>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Statistics Bar -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-icon pending">
+                ⏳
+            </div>
+            <div class="stat-content">
+                <h3>Pending User Approvals</h3>
+                <p>{{ pending_users|length }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon password-reset">
+                🔑
+            </div>
+            <div class="stat-content">
+                <h3>Pending Password Resets</h3>
+                <p>{{ pending_password_resets|length }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon approved">
+                ✅
+            </div>
+            <div class="stat-content">
+                <h3>Total Users</h3>
+                <p>{{ approved_users_count }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Reset Requests Section -->
+    <div class="approvals-section">
+        <div class="section-header">
+            <h2>
+                <span>🔑</span>
+                Pending Password Reset Requests
+            </h2>
+        </div>
+
+        {% if pending_password_resets %}
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Details</th>
+                    <th>Requested</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reset in pending_password_resets %}
+                <tr>
+                    <td>
+                        <div class="user-info">
+                            <div class="user-avatar password-reset-avatar">
+                                {{ reset.user.first_name.0|upper }}{{ reset.user.last_name.0|upper }}
+                            </div>
+                            <div class="user-details">
+                                <div class="username">@{{ reset.user.username }}</div>
+                                <div class="fullname">{{ reset.user.first_name }} {{ reset.user.last_name }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="user-details">
+                            <div class="user-meta">
+                                <span>🔐 Password Reset</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge password-reset-badge">
+                            {{ reset.requested_at|date:"M d, Y H:i" }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <form method="POST" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="request_type" value="password_reset">
+                                <input type="hidden" name="reset_id" value="{{ reset.id }}">
+                                <button type="submit" name="action" value="approve" class="btn-action btn-approve">
+                                    <span>✓</span>
+                                    Approve
+                                </button>
+                            </form>
+                            <button type="button" 
+                                    class="btn-action btn-decline" 
+                                    onclick="showPasswordResetDeclineModal('{{ reset.id }}', '{{ reset.user.username }}', '{{ reset.user.first_name }}', '{{ reset.user.last_name }}')">
+                                <span>✗</span>
+                                Decline
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h3>All Caught Up!</h3>
+            <p>There are no pending password reset requests at the moment.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- User Registrations Approvals -->
+    <div class="approvals-section" style="margin-top: 40px;">
+        <div class="section-header">
+            <h2>
+                <span>📋</span>
+                Pending User Registrations
+            </h2>
+        </div>
+
+        {% if pending_users %}
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Details</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in pending_users %}
+                <tr>
+                    <td>
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                {{ user.first_name.0|upper }}{{ user.last_name.0|upper }}
+                            </div>
+                            <div class="user-details">
+                                <div class="username">@{{ user.username }}</div>
+                                <div class="fullname">{{ user.first_name }} {{ user.last_name }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="user-details">
+                            <div class="user-meta">
+                                <span>📏 {{ user.height }}cm</span>
+                                <span>{{ user.get_gender_display }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge pending">
+                            <span>⏳</span>
+                            Pending
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <form method="POST" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="request_type" value="user">
+                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                <button type="submit" name="action" value="approve" class="btn-action btn-approve">
+                                    <span>✓</span>
+                                    Approve
+                                </button>
+                            </form>
+                            <button type="button" 
+                                    class="btn-action btn-decline" 
+                                    onclick="showUserDeclineModal('{{ user.id }}', '{{ user.username }}', '{{ user.first_name }}', '{{ user.last_name }}')">
+                                <span>✗</span>
+                                Decline
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h3>All Caught Up!</h3>
+            <p>There are no pending user approvals at the moment.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- User Decline -->
+<div class="confirm-modal-overlay" id="userDeclineModal">
+    <div class="confirm-modal">
+        <div class="confirm-modal-header">
+            <div class="confirm-modal-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="confirm-modal-title">Decline User Registration?</h3>
+        </div>
+        <div class="confirm-modal-body">
+            <p class="confirm-modal-message">
+                Are you sure you want to decline this user? This action cannot be undone and the user will be permanently removed from the system.
+            </p>
+            <div class="confirm-user-info">
+                <div class="user-avatar" id="userModalAvatar"></div>
+                <div class="user-details">
+                    <div class="username" id="userModalUsername"></div>
+                    <div class="fullname" id="userModalFullname"></div>
+                </div>
+            </div>
+        </div>
+        <div class="confirm-modal-footer">
+            <button type="button" class="confirm-btn confirm-btn-cancel" onclick="hideUserDeclineModal()">
+                Cancel
+            </button>
+            <form method="POST" id="userDeclineForm">
+                {% csrf_token %}
+                <input type="hidden" name="request_type" value="user">
+                <input type="hidden" name="user_id" id="userDeclineUserId">
+                <button type="submit" name="action" value="decline" class="confirm-btn confirm-btn-confirm">
+                    Decline User
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Password Reset Decline -->
+<div class="confirm-modal-overlay" id="passwordResetDeclineModal">
+    <div class="confirm-modal">
+        <div class="confirm-modal-header">
+            <div class="confirm-modal-icon password-reset-icon">
+                <i class="fas fa-key"></i>
+            </div>
+            <h3 class="confirm-modal-title">Decline Password Reset?</h3>
+        </div>
+        <div class="confirm-modal-body">
+            <p class="confirm-modal-message">
+                Are you sure you want to decline this password reset request? The user will need to submit a new request if they still need to reset their password.
+            </p>
+            <div class="confirm-user-info">
+                <div class="user-avatar password-reset-avatar" id="resetModalAvatar"></div>
+                <div class="user-details">
+                    <div class="username" id="resetModalUsername"></div>
+                    <div class="fullname" id="resetModalFullname"></div>
+                </div>
+            </div>
+        </div>
+        <div class="confirm-modal-footer">
+            <button type="button" class="confirm-btn confirm-btn-cancel" onclick="hidePasswordResetDeclineModal()">
+                Cancel
+            </button>
+            <form method="POST" id="passwordResetDeclineForm">
+                {% csrf_token %}
+                <input type="hidden" name="request_type" value="password_reset">
+                <input type="hidden" name="reset_id" id="resetDeclineId">
+                <button type="submit" name="action" value="decline" class="confirm-btn confirm-btn-confirm">
+                    Decline Request
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// User Decline Functions
+function showUserDeclineModal(userId, username, firstName, lastName) {
+    const modal = document.getElementById('userDeclineModal');
+    const userIdInput = document.getElementById('userDeclineUserId');
+    const usernameEl = document.getElementById('userModalUsername');
+    const fullnameEl = document.getElementById('userModalFullname');
+    const avatarEl = document.getElementById('userModalAvatar');
+    
+    userIdInput.value = userId;
+    usernameEl.textContent = '@' + username;
+    fullnameEl.textContent = firstName + ' ' + lastName;
+    avatarEl.textContent = firstName.charAt(0).toUpperCase() + lastName.charAt(0).toUpperCase();
+    
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function hideUserDeclineModal() {
+    const modal = document.getElementById('userDeclineModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Password Reset Decline Functions
+function showPasswordResetDeclineModal(resetId, username, firstName, lastName) {
+    const modal = document.getElementById('passwordResetDeclineModal');
+    const resetIdInput = document.getElementById('resetDeclineId');
+    const usernameEl = document.getElementById('resetModalUsername');
+    const fullnameEl = document.getElementById('resetModalFullname');
+    const avatarEl = document.getElementById('resetModalAvatar');
+    
+    resetIdInput.value = resetId;
+    usernameEl.textContent = '@' + username;
+    fullnameEl.textContent = firstName + ' ' + lastName;
+    avatarEl.textContent = firstName.charAt(0).toUpperCase() + lastName.charAt(0).toUpperCase();
+    
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function hidePasswordResetDeclineModal() {
+    const modal = document.getElementById('passwordResetDeclineModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Close Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideUserDeclineModal();
+        hidePasswordResetDeclineModal();
+    }
+});
+
+// Close on overlay click
+document.getElementById('userDeclineModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideUserDeclineModal();
+    }
+});
+
+document.getElementById('passwordResetDeclineModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hidePasswordResetDeclineModal();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const stats = document.querySelectorAll('.stat-card');
+    stats.forEach((stat, index) => {
+        stat.style.animationDelay = `${0.1 * index}s`;
+    });
+});
+</script>
+{% endblock %}

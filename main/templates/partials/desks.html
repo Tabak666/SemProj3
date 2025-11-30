@@ -1,0 +1,28 @@
+{% load static %}
+
+<div class="grid-container">
+    <img src="{% static 'Assets/este.jpg' %}" class="background-image" alt="Background">
+
+    {% for room, desks in rooms.items %}
+    <div class="room-wrapper" id="room-{{ room }}">
+        <h3>Room {{ room }}</h3>
+        <div class="room-block">
+            {% for entry in desks %}
+                {% if entry.desk %}
+                    <button class="btn btn{{ forloop.counter }}"
+                        data-desk-id="{{ entry.desk.mac_address }}"
+                        data-desk-number="{{ entry.number }}">
+                        {{ entry.number }}
+                    </button>
+                {% else %}
+                    <button class="btn btn{{ forloop.counter }} empty"
+                        data-desk-id=""
+                        data-desk-number="{{ entry.number }}">
+                        {{ entry.number }}
+                    </button>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>

@@ -1,68 +1,783 @@
-
+/* === SIDE PANEL BASE === */
 .side-panel {
-  position: fixed;        
-  top: 45px;             
-  left: 0;                
-  width: 19.3vw;           
-  height: 100vw;           
-  background-color: #e4d8d8;  
-  padding: 20px;          
-  z-index: -1;            
-  overflow-y: auto;   
+  position: fixed;
+  top: 60px; /* antes: 40px */
+  left: 0;
+  width: 20vw;
+  height: calc(100vh - 60px); /* evita que se salga de pantalla */
+  background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+  box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
+  padding: 25px 20px;
+  overflow-y: auto;
+  transition: all 0.3s ease-in-out;
+  border-right: 1px solid #d1d1d1;
+  z-index: 5;
 }
 
+.side-panel h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+/* === PANEL SECTIONS === */
+.panel-section {
+  background: #ffffff;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+  transition: transform 0.2s;
+}
+
+.panel-section:hover {
+  transform: translateY(-3px);
+}
+
+.panel-section h4 {
+  font-size: 1rem;
+  color: #34495e;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 4px;
+}
+
+/* === INPUTS & SELECTS === */
+.side-panel input[type="range"],
+.side-panel select,
+.side-panel input[type="date"],
+.side-panel input[type="time"],
+.side-panel input[type="datetime-local"] {
+  width: 100%;
+  padding: 6px;
+  margin-top: 6px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.side-panel input:focus,
+.side-panel select:focus {
+  border-color: #6c63ff;
+  box-shadow: 0 0 4px rgba(108, 99, 255, 0.3);
+}
+
+
+
+/* === BUTTONS === */
+
+.side-panel button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  background-color: #6c63ff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.side-panel button:hover {
+  background-color: #5a54d1;
+  transform: translateY(-2px);
+}
+
+
+/* === Disabled buttons (Pair / Unpair) === */
+
+
+/* === PROFILE BUTTONS === */
+.profile-btn {
+  width: 30%;
+  margin: 4px;
+  padding: 6px;
+  background-color: #d5d9f8;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #2c3e50;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.profile-btn:hover {
+  background-color: #bfc3ee;
+  transform: translateY(-2px);
+}
+
+/* === RESERVATION SECTION === */
+#reservation-section {
+  margin-top: 30px;
+  padding-top: 10px;
+  border-top: 1px solid #ccc;
+}
+
+#bookingForm input,
+#bookingForm button {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px;
+  border-radius: 5px;
+  border: 1px solid #aaa;
+}
+
+/* ------------------------------------------
+
+
+/* Existing absolute positions for desks remain */
+
+
+
+/* === GRID & BACKGROUND === */
 .grid-container {
   position: fixed;
-  top: 70px;             
+  top: 70px;
   right: 15px;
-  width: 79vw;
+  width: 78vw;
   height: 88vh;
   overflow: hidden;
 }
 
-/* BACKGROUND */
 .background-image {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;    
+  object-fit: contain;
   z-index: 0;
 }
 
-/* BUTTONS */
-.btn {
-  position: absolute;     /* posicion libre sobre el fondo */
-  width: 14%;             
+/* === DESK BUTTONS (image-based) === */
+.grid-container .btn {
+  position: absolute;
+  width: 14.5%;
   height: 16%;
-  border: none;
+  border: black 3px solid;
   border-radius: 10px;
-  background-color: rgba(181, 189, 181, 0.8);
-  color: white;
-  font-size: 18px;
+  background-image: url("/static/Assets/desk.svg");
+  background-size: cover;       /* scale to fit */
+  background-position: center;  /* center image */
+  background-repeat: no-repeat; /* no tiling */
   cursor: pointer;
-  z-index: 1;             /* orden de visibilidad */
-  transition: background-color 0.3s;
+  z-index: 1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+  color: #5a54d1;
+  font-size: 22px;
+  font-weight: 800;
+  display: flex;
+  justify-content: flex-start; /* left align number horizontally */
+  align-items: flex-end;       /* bottom align number vertically */
+  padding: 4px 8px;           /* space from the bottom-left corner */
 }
 
-.btn:hover {
-  background-color: #daf1dc;
+/* Hover & click effects */
+.grid-container .btn:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
 }
 
-/* BUTTON POSITIONS */
+.grid-container .btn:active {
+  transform: scale(0.95);
+  filter: brightness(0.9);
+}
+
+
+/* === DESK BUTTON POSITIONS === */
 .btn1 { top: 11%; left: 3%; }
 .btn2  { top: 11%; left: 19%; }
 .btn3  { top: 11%; left: 43%; }
 .btn4  { top: 11%; left: 83%; }
-.btn5  { top: 11%; left: 67%;  }
+.btn5  { top: 11%; left: 67%; }
 
 .btn6  { top: 42%; left: 6%; }
 .btn7  { top: 42%; left: 43%; }
 .btn8  { top: 42%; left: 80%; }
 
-.btn9  { top: 73%; left: 3%;  }
+.btn9  { top: 73%; left: 3%; }
 .btn10 { top: 73%; left: 19%; }
 .btn11 { top: 73%; left: 43%; }
-.btn12 { top: 73%; left: 83%; }
-.btn13 { top: 73%; left: 67%; }
+.btn12 { top: 73%; left: 67%; }
+.btn13 { top: 73%; left: 83%; }
+
+
+
+#pairBtn:disabled,
+#unpairBtn:disabled {
+  background-color: #bdbdbd !important;
+  color: #666 !important;
+  border: 1px solid #a0a0a0 !important;
+  cursor: not-allowed !important;
+  opacity: 0.8 !important;
+  transform: none !important;
+  box-shadow: none !important;
+  pointer-events: none !important; /* evita hover */
+}
+
+/* Ensure Bootstrap modal buttons keep Bootstrap look */
+.modal .btn {
+  position: static;
+  width: auto;
+  height: auto;
+  transform: none;
+  box-shadow: none;
+  border-radius: .375rem; /* Bootstrap default */
+}
+.modal .btn + .btn { margin-left: .5rem; }
+.modal .btn-secondary {
+  background-color: var(--bs-secondary);
+  border-color: var(--bs-secondary);
+  color: #fff;
+}
+.modal .btn-secondary:hover {
+  background-color: #5c636a; /* Bootstrap approx hover */
+  border-color: #565e64;
+}
+
+/* Stronger guarantee for the pairing modal close button */
+.pairing-modal .modal-footer .modal-close-btn {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+  color: #fff !important;
+  padding: .375rem .75rem !important;
+  border-radius: .375rem !important;
+}
+.pairing-modal .modal-footer .modal-close-btn:hover {
+  background-color: #5a54d1 !important; /* close to your theme */
+  border-color: #524cc1 !important;
+}
+
+
+/* === HEALTH POPUP (Final Polished UI) === */
+.health-popup {
+  position: fixed;
+  top: 25px;
+  right: 25px;
+  background: linear-gradient(135deg, #6c63ff 0%, #837dff 100%);
+  color: #fff;
+  padding: 20px 24px;
+  border-radius: 14px;
+  box-shadow: 0 12px 25px rgba(108, 99, 255, 0.3);
+  font-size: 0.95rem;
+  font-weight: 500;
+  width: 380px;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px) scale(0.97);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  z-index: 2000;
+}
+
+.health-popup.show {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0) scale(1);
+}
+
+.health-popup p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Buttons layout */
+.popup-buttons {
+  display: flex;
+  justify-content: space-between; /* ensures left-right spacing */
+  align-items: center;
+  margin-top: 12px;
+}
+
+.popup-buttons button {
+  flex: 1;
+  margin: 0 4px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Accept button (left) */
+#acceptBtn {
+  background-color: #fff;
+  color: #6c63ff;
+}
+
+#acceptBtn:hover {
+  background-color: #efedff;
+  transform: translateY(-1px);
+}
+
+/* Ignore button (right) */
+#ignoreBtn {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+#ignoreBtn:hover {
+  background-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+/* --- Color variants (with refined tones) --- */
+.health-popup.low {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff6f61 100%);
+  box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
+}
+
+.health-popup.high {
+  background: linear-gradient(135deg, #ff9800 0%, #ffb347 100%);
+  box-shadow: 0 12px 25px rgba(255, 152, 0, 0.4);
+}
+
+.health-popup.correct {
+  background: linear-gradient(135deg, #7feaa3 0%, #a0f2bc 100%); /* lighter green */
+  box-shadow: 0 12px 25px rgba(127, 234, 163, 0.35);
+  color: #063d18;
+}
+
+/* --- Color variants (with refined tones) --- */
+.health-popup.low {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff6f61 100%);
+  box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
+}
+
+.health-popup.high {
+  background: linear-gradient(135deg, #ff9800 0%, #ffb347 100%);
+  box-shadow: 0 12px 25px rgba(255, 152, 0, 0.4);
+}
+
+.health-popup.correct {
+  background: linear-gradient(135deg, #6fdd8b 0%, #82e0aa 100%); /* softer green */
+  box-shadow: 0 12px 25px rgba(111, 221, 139, 0.35);
+  color: #063d18;
+}
+
+.popup-buttons button.dark {
+  background-color: rgba(0, 0, 0, 0.15);
+  color: white;
+}
+
+.popup-buttons button.dark:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+/* --- Sitting Reminder Popup (teal tone) --- */
+.health-popup.sitting {
+  background: linear-gradient(135deg, #26c6da 0%, #80deea 100%);
+  box-shadow: 0 12px 25px rgba(38, 198, 218, 0.4);
+  color: #004d40;
+}
+
+.popup-buttons button#acceptBtn.sitting-btn {
+  background-color: #004d40;
+  color: #fff;
+}
+
+.popup-buttons button#ignoreBtn.sitting-btn {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #004d40;
+}
+
+button:disabled,
+button[disabled] {
+  background-color: #bdbdbd !important;
+  color: #666 !important;
+  border: 1px solid #a0a0a0 !important;
+  cursor: not-allowed !important;
+  opacity: 0.8 !important;
+  transform: none !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+.status-message {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  background: #eef5ff;
+  color: #1b4a9b;
+  display: none;
+}
+.status-message.error {
+  background: #fdecea;
+  color: #b71c1c;
+}
+.status-message.success {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+/* === Health Popup Header === */
+.popup-header {
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  padding-bottom: 6px;
+}
+
+.popup-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #ffffff;
+}
+
+/* === Views section: make the two buttons horizontal === */
+.view-section h4 {
+  margin-bottom: 8px;
+}
+
+.view-section .view-btn {
+  width: 48%; /* so two fit side by side */
+  display: inline-block;
+}
+
+.empty {
+  opacity: 0.3;
+  border-color: #ccc;
+  background-image: none;
+  cursor: default;
+}
+
+
+
+/* === OVERVIEW GRID === */
+/* === OVERVIEW CONTAINER === */
+.overview-container {
+  position: fixed;
+  top: 70px;
+  right: 15px;
+  width: 78vw;
+  height: 88vh;
+  background: #f8f9fc;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  padding: 30px 40px;
+  overflow-y: auto;
+  z-index: 1;
+}
+/* === OVERVIEW HEADER TITLES (Beautiful, modern look) === */
+
+.overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 35px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid rgba(108, 99, 255, 0.1);
+}
+
+/* Title section: main title + subtitle */
+.title-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  animation: fadeInTitle 0.8s ease-out;
+}
+
+.title-section h2 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #6c63ff;
+  letter-spacing: 0.6px;
+  margin: 0;
+  text-shadow: 0 3px 8px rgba(108, 99, 255, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title-section p {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #555;
+  opacity: 0.85;
+  margin: 5px 0 0;
+  letter-spacing: 0.2px;
+}
+
+/* Fade in animation for smooth entry */
+@keyframes fadeInTitle {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Floor selector refinement */
+.floor-selector {
+  background: #fff;
+  padding: 14px 18px;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transform: scale(1.1);
+  transition: all 0.3s ease;
+}
+
+.floor-selector:hover {
+  transform: scale(1.12);
+  box-shadow: 0 6px 16px rgba(108, 99, 255, 0.25);
+}
+
+.floor-selector label {
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #2c3e50;
+}
+
+.floor-selector select {
+  padding: 10px 16px;
+  border: 2px solid #6c63ff;
+  border-radius: 10px;
+  background-color: #f4f3ff;
+  color: #2c3e50;
+  font-weight: 600;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.floor-selector select:hover {
+  border-color: #837dff;
+  background-color: #fff;
+  box-shadow: 0 0 6px rgba(108, 99, 255, 0.25);
+}
+
+
+
+
+/* === FLOOR SELECTOR (Larger and modern) === */
+.floor-selector {
+  position: absolute;
+  top: 25px;
+  right: 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  padding: 14px 18px;
+  border-radius: 14px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+  transform: scale(1.15);
+}
+
+.floor-selector label {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  letter-spacing: 0.3px;
+}
+
+.floor-selector select {
+  padding: 10px 16px;
+  border: 2px solid #6c63ff;
+  border-radius: 10px;
+  background-color: #f4f3ff;
+  color: #2c3e50;
+  font-weight: 600;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.floor-selector select:hover {
+  border-color: #837dff;
+  background-color: #fff;
+  box-shadow: 0 0 6px rgba(108, 99, 255, 0.25);
+}
+
+/* === GRID === */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: auto auto auto; /* flexible rows */
+  gap: 15px 20px; /* very small vertical spacing, wider horizontally */
+  width: 100%;
+  max-width: 820px;
+  margin: 30px auto 0;
+
+}
+
+/* === BUTTONS === */
+.overview-grid button {
+  position: relative;
+  background-color: #fff;
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 600;
+  border: #403F40 5.2px solid;
+  border-radius: 12px;
+  padding: 0;
+  aspect-ratio: 5.7 / 3.21;
+  background-image: url("/static/Assets/floorplan5.png");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+/* === Hover overlay effect === */
+.overview-grid button::after {
+  content: attr(data-label);
+  position: absolute;
+  inset: 0;
+  background: rgba(108, 99, 255, 0.88); /* your app's accent color */
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(1.05);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  border-radius: 12px;
+}
+
+/* Hover State */
+.overview-grid button:hover::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.overview-grid button:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 8px 20px rgba(108, 99, 255, 0.3);
+}
+
+.room-wrapper {
+    margin-bottom: 30px;
+}
+
+.room-block {
+    display: grid;
+    grid-template-columns: repeat(6, 60px); /* 6 desks per row, adjust */
+    gap: 10px;
+}
+
+
+/* === ROOM ZOOM ANIMATION === */
+.room-zooming {
+  animation: zoomIn 0.5s ease-in-out forwards;
+}
+
+@keyframes zoomIn {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.zoom-overlay {
+  transform-origin: center center;
+  will-change: transform, width, height, top, left;
+}
+/* Smooth zoom layer */
+.zoom-overlay {
+  transform-origin: center center;
+  will-change: transform, width, height, top, left;
+  transition: all 0.8s ease-in-out;
+}
+
+/* White overlay for fade-to-white and fade-back-out */
+.fade-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: white;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10000;
+  transition: opacity 0.8s ease-in-out;
+}
+
+/* Fade in → white */
+.fade-overlay.fade-in {
+  opacity: 1;
+}
+
+
+/* Allow fading back out */
+.fade-overlay:not(.fade-in) {
+  opacity: 0;
+}
+
+/* === CORRIDOR SEPARATOR === */
+.corridor {
+  grid-column: 1 / span 2;
+  text-align: right;
+  position: relative;
+  margin: 2px 0;
+  color: #c1c1d3;
+  font-weight: 35;
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+  line-height: 1.1;
+}
+
+.corridor::before,
+.corridor::after {
+  content: "";
+  position: absolute;
+  left: -5%;
+  width: 106%; /* very short lines */
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(108, 99, 255, 0) 0%,
+    #a59292 50%,
+    rgba(108, 99, 255, 0) 100%
+  );
+  opacity: 0.7;
+}
+
+.corridor::before {
+  top: -5px;
+}
+.corridor::after {
+  bottom: -5px;
+}
+
+.grid-container .btn.normal {
+    background-image: url("/static/Assets/desk.svg");
+}
+
+.grid-container .btn.occupied {
+    background-image: url("/static/Assets/occupied.svg");
+}
+
+.grid-container .btn.broken {
+    background-image: url("/static/Assets/broken.svg");
+}

@@ -1,6 +1,4 @@
 {% extends 'base.html' %}
-
-{% comment %} {% block title %}Niga{% endblock %} {% endcomment %}
 {% load static %}
 
 {% block title %}Home{% endblock %}
@@ -12,30 +10,100 @@
 {% block content %}
 
 <div class="side-panel">
-  <h3>Side Panel</h3>
-  <p>Please select a desk</p>
-  <button>Hello</button>
+  <h3>Control Panel</h3>
+  {% if request.session.user_id %}
+  <div class="panel-section view-section">
+    <h4>Views</h4>
+    <button class="view-btn" data-view="desks">Desks</button>
+    <button class="view-btn" data-view="overview">Overview</button>
+  </div>
+    <div id="reservation-section">
+    <h4>Desk Reservation</h4>
+    <p id="selectedDesk">No desk selected</p>
+    <div id="statusMessage" class="status-message" aria-live="polite" role="status" style="display:none;"></div>
+
+    <div id="reservationActions" style="display:none; margin-bottom:45px;">
+      <form id="pairForm" method="POST" action="{% url 'pair_desk' %}">
+      {% csrf_token %}
+          <input type="hidden" name="desk_id" id="pairDeskId">
+          <button type="submit" id="pairBtn">Pair (Now)</button>
+      </form>
+
+      <form id="unpairForm" method="POST" action="{% url 'unpair_desk' %}">
+          {% csrf_token %}
+          <button type="submit" id="unpairBtn" disabled>Unpair</button>
+      </form>
+
+      <button id="showBooking">Book for Later</button>
+
+      <div id="bookingForm" style="display:none; margin-top:15px; margin-bottom:15px;">
+        <label for="bookStart">Start:</label>
+        <input type="datetime-local" id="bookStart">
+
+        <label for="bookEnd">End:</label>
+        <input type="datetime-local" id="bookEnd">
+
+        <button id="bookBtn">Book</button>
+        <button id="cancelBooking">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="desk-controls" style="display: none;">
+      <div class="panel-section">
+        <label for="heightSlider">Desk Height: <span id="heightValue">100</span> cm</label>
+        <input type="range" id="heightSlider" min="50" max="160" value="65" step="1">
+      </div>
+
+      <div class="panel-section">
+        <h4>Saved Configurations</h4>
+        <select id="configSelect">
+          <option value="">-- Select Configuration --</option>
+          <option value="morning">Morning Work</option>
+          <option value="standing">Standing Mode</option>
+          <option value="break">Break Mode</option>
+        </select>
+        <button id="loadConfig">Load</button>
+      </div>
+
+      <div class="panel-section">
+        <h4>Quick Profiles</h4>
+        <button class="profile-btn" data-height="70">Profile 1</button>
+        <button class="profile-btn" data-height="100">Profile 2</button>
+        <button class="profile-btn" data-height="120">Profile 3</button>
+      </div>
+  </div>
+
+  <div class="panel-section">
+    <label>
+      <input type="checkbox" id="toggleHealth" checked>
+      Show Health Recommendations
+    </label>
+  </div>
+</div>
+{% endif %}
+<div id="main-content">
+  {% include 'partials/desks.html' with rooms=rooms %}
 </div>
 
-<div class="grid-container">
-  <img src="{% static 'Assets/este.jpg' %}" alt="Fondo" class="background-image">
-
-  <button class="btn btn1">1</button>
-  <button class="btn btn2">2</button>
-  <button class="btn btn3">3</button>
-  <button class="btn btn4">4</button>
-  <button class="btn btn5">5</button>
-  <button class="btn btn6">6</button>
-  <button class="btn btn7">7</button>
-  <button class="btn btn8">8</button>
-  <button class="btn btn9">9</button>
-  <button class="btn btn10">10</button>
-  <button class="btn btn11">11</button>
-  <button class="btn btn12">12</button>
-  <button class="btn btn13">13</button>
+<div id="healthPopup" class="health-popup">
+  <div class="popup-header">
+    <h4 class="popup-title">💡 Health Recommendation</h4>
+  </div>
+  <p id="healthMessage">💡 Health tip will appear here</p>
+  <div class="popup-buttons">
+    <button id="acceptBtn">Accept</button>
+    <button id="ignoreBtn">Ignore</button>
+  </div>
 </div>
-
 
 {% endblock %}
 
+{% block extra_js %}
+<script>
+  const USER_HEIGHT_CM = {{ user_height|default:"176" }};
+</script>
+<script type="module" src="{% static 'script/desk.js' %}"></script>
 
+<script src="{% static 'script/overview.js' %}"></script>
+{% endblock %}
