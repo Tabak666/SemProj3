@@ -2,9 +2,8 @@
 
 // --------------------------- Utilities ---------------------------
 function safeGet(id) { return document.getElementById(id); }
-function hasClass(el, cls) { return el && el.classList && el.classList.contains(cls); }
 
-// CSRF helper (reads cookie; works even after dynamic HTML replacement)
+// CSRF helper
 function getCookie(name) {
   const v = document.cookie.split('; ').find(row => row.startsWith(name + '='));
   return v ? decodeURIComponent(v.split('=')[1]) : null;
@@ -19,9 +18,8 @@ const message = safeGet("healthMessage");
 const acceptBtn = safeGet("acceptBtn");
 const ignoreBtn = safeGet("ignoreBtn");
 const toggleHealth = safeGet("toggleHealth");
+const deskControls = safeGet("desk-controls");
 
-// USER_HEIGHT_CM must be injected server-side in index.html before this script loads.
-// e.g. <script>const USER_HEIGHT_CM = {{ user_height|default:"176" }};</script>
 if (typeof USER_HEIGHT_CM === 'undefined') {
   window.USER_HEIGHT_CM = 176;
 }
@@ -38,10 +36,8 @@ let sittingTimer = null;
 let sittingTimeSeconds = 0;
 const SITTING_ALERT_DELAY = 10;
 
-// safety guard: elements may not exist on every page
 function ensureElementListeners() {
   if (!slider || !valueLabel || !popup || !acceptBtn || !ignoreBtn || !toggleHealth) return;
-  // set initial displayed value
   valueLabel.textContent = slider.value;
 }
 
@@ -89,14 +85,43 @@ function showSittingReminder() {
   showPopup();
 }
 
-// --- Slider logic (guarding existence of slider & toggle) ---
+// --- Backend Height Update Helper ---
+function updateBackendHeight(deskId, heightVal) {
+    const formData = new FormData();
+    formData.append("desk_id", deskId);
+    formData.append("height", heightVal);
+
+    fetch("/api/set_desk_height/", {
+        method: "POST",
+        headers: { "X-CSRFToken": CSRF_TOKEN },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) {
+            setStatusMessage(data.message, "error");
+        }
+    })
+    .catch(err => console.error("Height update failed", err));
+}
+
+// --- Slider logic ---
 if (slider && valueLabel && toggleHealth) {
+  let debounceTimer;
+
   slider.addEventListener("input", () => {
     const height = parseInt(slider.value);
     valueLabel.textContent = height;
 
-    // Check for any active desk in the ephemeral frontend state
     const hasActiveDesk = Object.values(window.desks || {}).some(d => d.status === "booked" || d.status === "paired");
+    const deskId = reservationActions?.dataset?.currentDesk;
+    
+    if (deskId && deskControls && deskControls.style.display !== "none") {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            updateBackendHeight(deskId, height);
+        }, 300);
+    }
 
     if (!hasActiveDesk || !toggleHealth.checked) {
       hidePopup();
@@ -150,12 +175,14 @@ acceptBtn && acceptBtn.addEventListener("click", () => {
     slider.value = sittingHeight;
     valueLabel.textContent = sittingHeight;
   }
+  slider.dispatchEvent(new Event('input'));
   hidePopup();
 });
 ignoreBtn && ignoreBtn.addEventListener("click", () => {
   if (currentRecommendation === "standingChoice") {
     slider.value = standingHeight;
     valueLabel.textContent = standingHeight;
+    slider.dispatchEvent(new Event('input'));
   }
   hidePopup();
 });
@@ -164,9 +191,16 @@ ignoreBtn && ignoreBtn.addEventListener("click", () => {
 document.querySelectorAll(".profile-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const h = btn.dataset.height;
+    const deskId = reservationActions?.dataset?.currentDesk;
+
     if (slider && valueLabel) {
       slider.value = h;
       valueLabel.textContent = h;
+      slider.dispatchEvent(new Event('input'));
+    } else {
+        if (deskId && deskControls && deskControls.style.display !== "none") {
+            updateBackendHeight(deskId, h);
+        }
     }
   });
 });
@@ -194,16 +228,14 @@ const cancelBooking = safeGet("cancelBooking");
 const bookStart = safeGet("bookStart");
 const bookEnd = safeGet("bookEnd");
 
-window.desks = window.desks || {}; // ephemeral local state (not authoritative)
+window.desks = window.desks || {};
 
-// event delegation for desk clicks (works after refreshs because listener attached to #main-content)
 document.getElementById("main-content")?.addEventListener("click", (e) => {
   const btn = e.target.closest(".btn");
   if (!btn) return;
 
-  // read desk id from data attribute
   const deskId = btn.dataset.deskId;
-  if (!deskId) return; // empty slots
+  if (!deskId) return;
 
   const selectedDesk = safeGet("selectedDesk");
   selectedDesk && (selectedDesk.textContent = `Selected Desk: ${deskId}`);
@@ -211,15 +243,20 @@ document.getElementById("main-content")?.addEventListener("click", (e) => {
   if (reservationActions) reservationActions.style.display = "block";
   if (reservationActions) reservationActions.dataset.currentDesk = deskId;
 
-  // Ask backend whether this user is paired to the desk
+  if (deskControls) deskControls.style.display = "none";
+
   fetch(`/api/user-status/${encodeURIComponent(deskId)}/`)
     .then(res => res.json())
     .then(data => {
-      if (pairBtn) pairBtn.disabled = !!data.is_paired;
-      if (unpairBtn) unpairBtn.disabled = !data.is_paired;
+      const isPaired = !!data.is_paired;
+      if (pairBtn) pairBtn.disabled = isPaired;
+      if (unpairBtn) unpairBtn.disabled = !isPaired;
+
+      if (deskControls) {
+          deskControls.style.display = isPaired ? "block" : "none";
+      }
     })
     .catch(err => {
-      // Fail gracefully — keep pair/unpair as-is
       console.warn("user-status check failed", err);
     });
 });
@@ -244,7 +281,7 @@ pairBtn?.addEventListener("click", (e) => {
     if (data.success) {
       if (pairBtn) pairBtn.disabled = true;
       if (unpairBtn) unpairBtn.disabled = false;
-      // mark ephemeral state
+      if (deskControls) deskControls.style.display = "block";
       window.desks = window.desks || {};
       window.desks[deskId] = { status: "paired", start: new Date().toLocaleString() };
     }
@@ -259,7 +296,6 @@ unpairBtn?.addEventListener("click", (e) => {
   if (!deskId) return setStatusMessage("No desk selected.", "error");
 
   const formData = new FormData();
-  // In your backend unpair_desk_view only checks session user — no desk_id required.
   fetch("/unpair_desk/", {
     method: "POST",
     headers: { "X-CSRFToken": CSRF_TOKEN },
@@ -271,14 +307,13 @@ unpairBtn?.addEventListener("click", (e) => {
     if (data.success) {
       if (pairBtn) pairBtn.disabled = false;
       if (unpairBtn) unpairBtn.disabled = true;
-      // update ephemeal state
+      if (deskControls) deskControls.style.display = "none";
       if (window.desks && window.desks[deskId]) delete window.desks[deskId];
     }
   })
   .catch(err => setStatusMessage("Unpair request failed.", "error"));
 });
 
-// Booking UI (local only — backend implementation pending)
 showBooking?.addEventListener("click", () => bookingForm && (bookingForm.style.display = "block"));
 cancelBooking?.addEventListener("click", () => {
   if (!bookingForm) return;
@@ -301,28 +336,34 @@ bookBtn?.addEventListener("click", () => {
 });
 
 // --------------------------- View switching ---------------------------
-// Keep one listener on view buttons and handle "active" class
 function initViewButtons() {
   document.querySelectorAll(".view-btn").forEach(button => {
-    // avoid double attaching: remove previous handler by cloning technique
     const clone = button.cloneNode(true);
     button.parentNode.replaceChild(clone, button);
   });
 
   document.querySelectorAll(".view-btn").forEach(button => {
     button.addEventListener("click", () => {
-      // toggle active class
       document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
       button.classList.add("active");
 
       const view = button.dataset.view;
-      fetch(`/load_view/${view}/`)
+      let url = `/load_view/${view}/`;
+
+      // ✅ KEY FIX: Load the last active room from storage if clicking "Desks"
+      if (view === 'desks') {
+          const storedRoom = sessionStorage.getItem("lastDeskRoom");
+          if (storedRoom) {
+              url += `?room=Room%20${encodeURIComponent(storedRoom)}`;
+          }
+      }
+
+      fetch(url)
         .then(res => res.text())
         .then(html => {
           const main = document.getElementById("main-content");
           if (!main) return;
           main.innerHTML = html;
-          // ensure any overview code re-initializes
           document.dispatchEvent(new Event("viewChanged"));
           document.dispatchEvent(new Event("overviewLoaded"));
         })
@@ -332,7 +373,6 @@ function initViewButtons() {
 }
 initViewButtons();
 
-// If no active view is marked on load, mark Desks as active (index shows A by default)
 document.addEventListener("DOMContentLoaded", () => {
   if (!document.querySelector(".view-btn.active")) {
     const btn = document.querySelector('.view-btn[data-view="desks"]');
@@ -340,19 +380,42 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+// --------------------------- Sync State Logic ---------------------------
+// This function constantly ensures the sidebar state matches what is actually on screen
+function syncStateWithContent() {
+    const roomWrapper = document.querySelector(".room-wrapper");
+    
+    // If a room is visible on screen...
+    if (roomWrapper) {
+        // 1. Force sidebar to "Desks" if it isn't already
+        const desksBtn = document.querySelector('.view-btn[data-view="desks"]');
+        if (desksBtn && !desksBtn.classList.contains("active")) {
+            document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
+            desksBtn.classList.add("active");
+        }
+
+        // 2. Save the visible room to storage
+        const roomId = roomWrapper.id.replace(/^room-/, "");
+        if (roomId) {
+            sessionStorage.setItem("lastDeskRoom", roomId);
+        }
+    }
+}
+// Run this check frequently to catch any state drift (e.g. from overview.js navigation)
+setInterval(syncStateWithContent, 1000);
+
+
 // --------------------------- Auto-refresh logic ---------------------------
-// Try to keep the currently visible room (if any) when refreshing
 async function autoRefreshDesks() {
   const activeViewBtn = document.querySelector(".view-btn.active");
   const activeView = activeViewBtn ? activeViewBtn.dataset.view : null;
-  if (activeView !== "desks") return; // only when desks view active
+  if (activeView !== "desks") return;
 
-  // find currently visible room wrapper id (room-A, room-B, ...)
   const currentRoomWrapper = document.querySelector(".room-wrapper");
   const roomId = currentRoomWrapper ? currentRoomWrapper.id.replace(/^room-/, "") : null;
 
   let url = "/load_view/desks/";
-  if (roomId) url += `?room=Room%20${encodeURIComponent(roomId)}`; // matches your view filter format sometimes "Room A"
+  if (roomId) url += `?room=Room%20${encodeURIComponent(roomId)}`;
 
   try {
     const res = await fetch(url, { cache: "no-store" });
@@ -360,20 +423,14 @@ async function autoRefreshDesks() {
     const main = document.getElementById("main-content");
     if (!main) return;
 
-    // quick compare — if identical, skip DOM replacement
     if (main.innerHTML.trim() === html.trim()) {
       return;
     }
 
     main.innerHTML = html;
-
-    // re-run view button init (they live outside main-content but we ensure everything wired)
     initViewButtons();
-
-    // re-dispatch overviewLoaded so overview navigation logic reattaches listeners
     document.dispatchEvent(new Event("overviewLoaded"));
 
-    // If a desk is currently selected, re-check its pairing status with backend (to sync)
     const selectedDeskId = reservationActions?.dataset?.currentDesk;
     if (selectedDeskId) {
       fetch(`/api/user-status/${encodeURIComponent(selectedDeskId)}/`)
@@ -381,6 +438,9 @@ async function autoRefreshDesks() {
         .then(data => {
           if (pairBtn) pairBtn.disabled = !!data.is_paired;
           if (unpairBtn) unpairBtn.disabled = !data.is_paired;
+          if (deskControls) {
+              deskControls.style.display = data.is_paired ? "block" : "none";
+          }
         })
         .catch(() => {});
     }
@@ -389,18 +449,10 @@ async function autoRefreshDesks() {
   }
 }
 
-// start auto-refresh loop (3s recommended; adjust as needed)
 setInterval(autoRefreshDesks, 3000);
 
-// run once on load to make sure UI state is normalized
 document.addEventListener("DOMContentLoaded", () => {
   ensureElementListeners();
-  // mark active view if none
-  if (!document.querySelector(".view-btn.active")) {
-    const btn = document.querySelector('.view-btn[data-view="desks"]');
-    if (btn) btn.classList.add("active");
-  }
-  // initial pairing status checks won't run until user selects a desk
 });
 
 function refreshDeskStatus() {
@@ -421,29 +473,5 @@ function refreshDeskStatus() {
     });
 }
 
-// Run on load and every 3s
 document.addEventListener("DOMContentLoaded", refreshDeskStatus);
 setInterval(refreshDeskStatus, 3000);
-
-function updateDeskButtons(desksApi) {
-    document.querySelectorAll(".desk-btn").forEach(btn => {
-        const deskId = btn.dataset.deskId;
-        const desk = desksApi[deskId];
-        if (!desk) return;
-
-        // Determine state
-        if (desk.desk_data.state.status !== "Normal" || desk.desk_data.state.isAntiCollision) {
-            btn.classList.add("broken");
-            btn.classList.remove("occupied", "normal");
-            btn.disabled = true;
-        } else if (desk.user) {
-            btn.classList.add("occupied");
-            btn.classList.remove("broken", "normal");
-            btn.disabled = false;
-        } else {
-            btn.classList.add("normal");
-            btn.classList.remove("broken", "occupied");
-            btn.disabled = false;
-        }
-    });
-}
