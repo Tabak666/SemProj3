@@ -1,4 +1,3 @@
-
 // --------------------------- Utilities ---------------------------
 function safeGet(id) { return document.getElementById(id); }
 
@@ -400,6 +399,16 @@ pairBtn?.addEventListener("click", (e) => {
       if (deskControls) deskControls.style.display = "block";
       window.desks = window.desks || {};
       window.desks[deskId] = { status: "paired", start: new Date().toLocaleString() };
+
+      // --- NEW CODE: Immediately update the UI ---
+      const deskBtn = document.querySelector(`.grid-container .btn[data-desk-id="${deskId}"]`);
+      if (deskBtn) {
+          deskBtn.classList.add("occupied");
+          // Optionally set a title, though we might not have the username here immediately
+          // unless returned by the API. A generic message or "You" works for immediate feedback.
+          deskBtn.title = "Occupied by you"; 
+      }
+      // ------------------------------------------
     }
   })
   .catch(err => setStatusMessage("Pair request failed.", "error"));
@@ -425,6 +434,14 @@ unpairBtn?.addEventListener("click", (e) => {
       if (unpairBtn) unpairBtn.disabled = true;
       if (deskControls) deskControls.style.display = "none";
       if (window.desks && window.desks[deskId]) delete window.desks[deskId];
+
+      // --- NEW CODE: Immediately update the UI ---
+      const deskBtn = document.querySelector(`.grid-container .btn[data-desk-id="${deskId}"]`);
+      if (deskBtn) {
+          deskBtn.classList.remove("occupied");
+          deskBtn.title = ""; // Clear the tooltip
+      }
+      // ------------------------------------------
     }
   })
   .catch(err => setStatusMessage("Unpair request failed.", "error"));
