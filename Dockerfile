@@ -8,11 +8,11 @@ RUN apt-get update \
 WORKDIR /app
 
 # Clone the repository into /app
-RUN git clone https://github.com/Tabak666/SemProj3.git /app
+RUN git clone -b dockerfile https://github.com/Tabak666/SemProj3.git /app
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir -r SemProj3/requirements.txt
+ && pip install --no-cache-dir -r requirements.txt
 
 # Expose Django default port
 EXPOSE 8000
