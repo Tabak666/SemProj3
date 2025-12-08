@@ -6,3 +6,6 @@ pip install livereload
 pip install django-extensions  
 
 python manage.py runserver
+
+docker build -t tablemanager .
+docker run -p 8000:8000 tablemanager
