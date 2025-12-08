@@ -1,0 +1,6 @@
+Django
+django-extensions
+django-widget-tweaks
+djangorestframework
+django-celery-beat
+requests
