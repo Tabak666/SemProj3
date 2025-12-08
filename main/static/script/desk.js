@@ -1,17 +1,13 @@
-// desk.js — unified, robust, auto-refreshing script
-
 // --------------------------- Utilities ---------------------------
 function safeGet(id) { return document.getElementById(id); }
-function hasClass(el, cls) { return el && el.classList && el.classList.contains(cls); }
 
-// CSRF helper (reads cookie; works even after dynamic HTML replacement)
 function getCookie(name) {
   const v = document.cookie.split('; ').find(row => row.startsWith(name + '='));
   return v ? decodeURIComponent(v.split('=')[1]) : null;
 }
 const CSRF_TOKEN = getCookie('csrftoken');
 
-// --------------------------- Height / Popup ---------------------------
+// --------------------------- Height / Popup / Loading ---------------------------
 const slider = safeGet("heightSlider");
 const valueLabel = safeGet("heightValue");
 const popup = safeGet("healthPopup");
@@ -19,9 +15,21 @@ const message = safeGet("healthMessage");
 const acceptBtn = safeGet("acceptBtn");
 const ignoreBtn = safeGet("ignoreBtn");
 const toggleHealth = safeGet("toggleHealth");
+const deskControls = safeGet("desk-controls");
 
-// USER_HEIGHT_CM must be injected server-side in index.html before this script loads.
-// e.g. <script>const USER_HEIGHT_CM = {{ user_height|default:"176" }};</script>
+// New Elements for Confirmation & Loading
+const confirmModalEl = safeGet("moveConfirmModal");
+const confirmHeightVal = safeGet("confirmHeightVal");
+const confirmMoveBtn = safeGet("confirmMoveBtn");
+const loadingOverlay = safeGet("deskLoadingOverlay");
+
+let pendingMoveHeight = null;
+let confirmModal = null;
+
+if (confirmModalEl && typeof bootstrap !== 'undefined') {
+    confirmModal = new bootstrap.Modal(confirmModalEl);
+}
+
 if (typeof USER_HEIGHT_CM === 'undefined') {
   window.USER_HEIGHT_CM = 176;
 }
@@ -38,10 +46,8 @@ let sittingTimer = null;
 let sittingTimeSeconds = 0;
 const SITTING_ALERT_DELAY = 10;
 
-// safety guard: elements may not exist on every page
 function ensureElementListeners() {
   if (!slider || !valueLabel || !popup || !acceptBtn || !ignoreBtn || !toggleHealth) return;
-  // set initial displayed value
   valueLabel.textContent = slider.value;
 }
 
@@ -89,14 +95,134 @@ function showSittingReminder() {
   showPopup();
 }
 
-// --- Slider logic (guarding existence of slider & toggle) ---
-if (slider && valueLabel && toggleHealth) {
-  slider.addEventListener("input", () => {
-    const height = parseInt(slider.value);
-    valueLabel.textContent = height;
+// --- MOVEMENT MONITORING LOGIC ---
+function monitorDeskMovement(deskId, targetHeight) {
+    let attempts = 0;
+    const maxAttempts = 60; // Max 60 seconds timeout
 
-    // Check for any active desk in the ephemeral frontend state
+    // Update overlay text to show we are waiting
+    if (loadingOverlay) {
+        const text = loadingOverlay.querySelector('p');
+        if (text) text.textContent = "Moving desk... please wait";
+    }
+
+    const poll = setInterval(() => {
+        attempts++;
+        fetch(`/api/user-status/${encodeURIComponent(deskId)}/`)
+        .then(r => r.json())
+        .then(data => {
+            const currentH = data.current_height;
+            const isMoving = data.is_moving;
+
+            // Success Condition 1: Reached target height (exact or +/- 1cm)
+            if (currentH !== null && Math.abs(currentH - targetHeight) <= 1) {
+                stopLoading(`Desk reached ${targetHeight}cm`, "success", targetHeight);
+            } 
+            // Stop Condition 2: Desk stopped moving (and it wasn't just starting)
+            // We wait > 2 attempts to ensure the simulator had time to start the motor
+            else if (isMoving === false && attempts > 2) { 
+                stopLoading(`Desk stopped at ${currentH}cm`, "warning", currentH);
+            }
+            
+            // Timeout
+            if (attempts >= maxAttempts) {
+                stopLoading("Movement timed out", "error", currentH);
+            }
+        })
+        .catch(err => console.error("Polling error", err));
+    }, 1000);
+
+    function stopLoading(msg, type, finalHeight) {
+        clearInterval(poll);
+        if (loadingOverlay) loadingOverlay.classList.remove("active");
+        setStatusMessage(msg, type);
+        
+        // Sync slider to where it actually ended up
+        if (finalHeight && slider && valueLabel) {
+            slider.value = finalHeight;
+            valueLabel.textContent = finalHeight;
+        }
+    }
+}
+
+// 1. Request Movement (Triggers Modal)
+function requestDeskMovement(height) {
+    if (!confirmModal) {
+        if(confirm(`Are you sure you want to move the desk to ${height}cm?`)) {
+            executeDeskMovement(height);
+        }
+        return;
+    }
+    
+    pendingMoveHeight = height;
+    if (confirmHeightVal) confirmHeightVal.textContent = height;
+    confirmModal.show();
+}
+
+// 2. Execute Movement (Triggers API + Loading + Monitoring)
+function executeDeskMovement(height) {
+    const deskId = reservationActions?.dataset?.currentDesk;
+    if (!deskId) return;
+
+    if (loadingOverlay) {
+        loadingOverlay.classList.add("active");
+        const text = loadingOverlay.querySelector('p');
+        if(text) text.textContent = "Sending command...";
+    }
+
+    const formData = new FormData();
+    formData.append("desk_id", deskId);
+    formData.append("height", height);
+
+    fetch("/api/set_desk_height/", {
+        method: "POST",
+        headers: { "X-CSRFToken": CSRF_TOKEN },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) {
+            if (loadingOverlay) loadingOverlay.classList.remove("active");
+            setStatusMessage(data.message, "error");
+        } else {
+            // ✅ SUCCESS: Now wait for it to actually move
+            monitorDeskMovement(deskId, height);
+        }
+    })
+    .catch(err => {
+        console.error("Height update failed", err);
+        if (loadingOverlay) loadingOverlay.classList.remove("active");
+        setStatusMessage("Connection failed", "error");
+    });
+}
+
+// 3. Confirm Button Listener
+if (confirmMoveBtn) {
+    confirmMoveBtn.addEventListener("click", () => {
+        if (pendingMoveHeight !== null) {
+            executeDeskMovement(pendingMoveHeight);
+            confirmModal.hide();
+        }
+    });
+}
+
+
+// --- Slider logic ---
+if (slider && valueLabel && toggleHealth) {
+  
+  slider.addEventListener("input", () => {
+      valueLabel.textContent = slider.value;
+  });
+
+  slider.addEventListener("change", () => {
+    const height = parseInt(slider.value);
+    
     const hasActiveDesk = Object.values(window.desks || {}).some(d => d.status === "booked" || d.status === "paired");
+    const deskId = reservationActions?.dataset?.currentDesk;
+    
+    if (deskId && deskControls && deskControls.style.display !== "none") {
+        requestDeskMovement(height);
+    }
 
     if (!hasActiveDesk || !toggleHealth.checked) {
       hidePopup();
@@ -138,35 +264,36 @@ if (slider && valueLabel && toggleHealth) {
   });
 }
 
-// Popup action buttons
 acceptBtn && acceptBtn.addEventListener("click", () => {
+  let targetH = slider.value;
   if (currentRecommendation === "low") {
-    slider.value = sittingHeight;
-    valueLabel.textContent = sittingHeight;
+    targetH = sittingHeight;
   } else if (currentRecommendation === "high" || currentRecommendation === "sittingReminder") {
-    slider.value = standingHeight;
-    valueLabel.textContent = standingHeight;
+    targetH = standingHeight;
   } else if (currentRecommendation === "standingChoice") {
-    slider.value = sittingHeight;
-    valueLabel.textContent = sittingHeight;
+    targetH = sittingHeight;
   }
   hidePopup();
+  requestDeskMovement(targetH);
 });
+
 ignoreBtn && ignoreBtn.addEventListener("click", () => {
   if (currentRecommendation === "standingChoice") {
-    slider.value = standingHeight;
-    valueLabel.textContent = standingHeight;
+    hidePopup();
+    requestDeskMovement(standingHeight);
+  } else {
+    hidePopup();
   }
-  hidePopup();
 });
 
 // --------------------------- Profiles / Config / Status ---------------------------
 document.querySelectorAll(".profile-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const h = btn.dataset.height;
-    if (slider && valueLabel) {
-      slider.value = h;
-      valueLabel.textContent = h;
+    const deskId = reservationActions?.dataset?.currentDesk;
+
+    if (deskId && deskControls && deskControls.style.display !== "none") {
+        requestDeskMovement(h);
     }
   });
 });
@@ -194,34 +321,59 @@ const cancelBooking = safeGet("cancelBooking");
 const bookStart = safeGet("bookStart");
 const bookEnd = safeGet("bookEnd");
 
-window.desks = window.desks || {}; // ephemeral local state (not authoritative)
+window.desks = window.desks || {};
 
-// event delegation for desk clicks (works after refreshs because listener attached to #main-content)
+function activateDeskPanel(deskId) {
+  document.querySelectorAll('.grid-container .btn').forEach(b => b.classList.remove('selected'));
+  const activeBtn = document.querySelector(`.grid-container .btn[data-desk-id="${deskId}"]`);
+  if (activeBtn) {
+      activeBtn.classList.add('selected');
+  }
+
+  const selectedDesk = safeGet("selectedDesk");
+  if (selectedDesk) selectedDesk.textContent = `Selected Desk: ${deskId}`;
+
+  if (reservationActions) {
+      reservationActions.style.display = "block";
+      reservationActions.dataset.currentDesk = deskId;
+  }
+
+  if (deskControls) deskControls.style.display = "none";
+
+  fetch(`/api/user-status/${encodeURIComponent(deskId)}/`)
+    .then(res => res.json())
+    .then(data => {
+      const isPaired = !!data.is_paired;
+      if (pairBtn) pairBtn.disabled = isPaired;
+      if (unpairBtn) unpairBtn.disabled = !isPaired;
+
+      if (deskControls) {
+          deskControls.style.display = isPaired ? "block" : "none";
+          
+          if (isPaired && data.current_height && slider && valueLabel) {
+              slider.value = data.current_height;
+              valueLabel.textContent = data.current_height;
+          }
+      }
+      
+      if (isPaired) {
+          window.desks = window.desks || {};
+          window.desks[deskId] = { status: "paired", start: new Date().toLocaleString() };
+      }
+    })
+    .catch(err => {
+      console.warn("user-status check failed", err);
+    });
+}
+
 document.getElementById("main-content")?.addEventListener("click", (e) => {
   const btn = e.target.closest(".btn");
   if (!btn) return;
 
-  // read desk id from data attribute
   const deskId = btn.dataset.deskId;
-  if (!deskId) return; // empty slots
+  if (!deskId) return;
 
-  const selectedDesk = safeGet("selectedDesk");
-  selectedDesk && (selectedDesk.textContent = `Selected Desk: ${deskId}`);
-
-  if (reservationActions) reservationActions.style.display = "block";
-  if (reservationActions) reservationActions.dataset.currentDesk = deskId;
-
-  // Ask backend whether this user is paired to the desk
-  fetch(`/api/user-status/${encodeURIComponent(deskId)}/`)
-    .then(res => res.json())
-    .then(data => {
-      if (pairBtn) pairBtn.disabled = !!data.is_paired;
-      if (unpairBtn) unpairBtn.disabled = !data.is_paired;
-    })
-    .catch(err => {
-      // Fail gracefully — keep pair/unpair as-is
-      console.warn("user-status check failed", err);
-    });
+  activateDeskPanel(deskId);
 });
 
 // Pair desk (POST)
@@ -244,9 +396,19 @@ pairBtn?.addEventListener("click", (e) => {
     if (data.success) {
       if (pairBtn) pairBtn.disabled = true;
       if (unpairBtn) unpairBtn.disabled = false;
-      // mark ephemeral state
+      if (deskControls) deskControls.style.display = "block";
       window.desks = window.desks || {};
       window.desks[deskId] = { status: "paired", start: new Date().toLocaleString() };
+
+      // --- NEW CODE: Immediately update the UI ---
+      const deskBtn = document.querySelector(`.grid-container .btn[data-desk-id="${deskId}"]`);
+      if (deskBtn) {
+          deskBtn.classList.add("occupied");
+          // Optionally set a title, though we might not have the username here immediately
+          // unless returned by the API. A generic message or "You" works for immediate feedback.
+          deskBtn.title = "Occupied by you"; 
+      }
+      // ------------------------------------------
     }
   })
   .catch(err => setStatusMessage("Pair request failed.", "error"));
@@ -259,7 +421,6 @@ unpairBtn?.addEventListener("click", (e) => {
   if (!deskId) return setStatusMessage("No desk selected.", "error");
 
   const formData = new FormData();
-  // In your backend unpair_desk_view only checks session user — no desk_id required.
   fetch("/unpair_desk/", {
     method: "POST",
     headers: { "X-CSRFToken": CSRF_TOKEN },
@@ -271,14 +432,21 @@ unpairBtn?.addEventListener("click", (e) => {
     if (data.success) {
       if (pairBtn) pairBtn.disabled = false;
       if (unpairBtn) unpairBtn.disabled = true;
-      // update ephemeal state
+      if (deskControls) deskControls.style.display = "none";
       if (window.desks && window.desks[deskId]) delete window.desks[deskId];
+
+      // --- NEW CODE: Immediately update the UI ---
+      const deskBtn = document.querySelector(`.grid-container .btn[data-desk-id="${deskId}"]`);
+      if (deskBtn) {
+          deskBtn.classList.remove("occupied");
+          deskBtn.title = ""; // Clear the tooltip
+      }
+      // ------------------------------------------
     }
   })
   .catch(err => setStatusMessage("Unpair request failed.", "error"));
 });
 
-// Booking UI (local only — backend implementation pending)
 showBooking?.addEventListener("click", () => bookingForm && (bookingForm.style.display = "block"));
 cancelBooking?.addEventListener("click", () => {
   if (!bookingForm) return;
@@ -301,28 +469,33 @@ bookBtn?.addEventListener("click", () => {
 });
 
 // --------------------------- View switching ---------------------------
-// Keep one listener on view buttons and handle "active" class
 function initViewButtons() {
   document.querySelectorAll(".view-btn").forEach(button => {
-    // avoid double attaching: remove previous handler by cloning technique
     const clone = button.cloneNode(true);
     button.parentNode.replaceChild(clone, button);
   });
 
   document.querySelectorAll(".view-btn").forEach(button => {
     button.addEventListener("click", () => {
-      // toggle active class
       document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
       button.classList.add("active");
 
       const view = button.dataset.view;
-      fetch(`/load_view/${view}/`)
+      let url = `/load_view/${view}/`;
+
+      if (view === 'desks') {
+          const storedRoom = sessionStorage.getItem("lastDeskRoom");
+          if (storedRoom) {
+              url += `?room=Room%20${encodeURIComponent(storedRoom)}`;
+          }
+      }
+
+      fetch(url)
         .then(res => res.text())
         .then(html => {
           const main = document.getElementById("main-content");
           if (!main) return;
           main.innerHTML = html;
-          // ensure any overview code re-initializes
           document.dispatchEvent(new Event("viewChanged"));
           document.dispatchEvent(new Event("overviewLoaded"));
         })
@@ -332,27 +505,50 @@ function initViewButtons() {
 }
 initViewButtons();
 
-// If no active view is marked on load, mark Desks as active (index shows A by default)
 document.addEventListener("DOMContentLoaded", () => {
+  ensureElementListeners();
+  
   if (!document.querySelector(".view-btn.active")) {
     const btn = document.querySelector('.view-btn[data-view="desks"]');
     if (btn) btn.classList.add("active");
   }
+
+  if (typeof INITIAL_DESK_ID !== 'undefined' && INITIAL_DESK_ID) {
+      activateDeskPanel(INITIAL_DESK_ID);
+  }
 });
 
+// --------------------------- Sync State Logic ---------------------------
+function syncStateWithContent() {
+    const roomWrapper = document.querySelector(".room-wrapper");
+    
+    if (roomWrapper) {
+        const desksBtn = document.querySelector('.view-btn[data-view="desks"]');
+        if (desksBtn && !desksBtn.classList.contains("active")) {
+            document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
+            desksBtn.classList.add("active");
+        }
+
+        const roomId = roomWrapper.id.replace(/^room-/, "");
+        if (roomId) {
+            sessionStorage.setItem("lastDeskRoom", roomId);
+        }
+    }
+}
+setInterval(syncStateWithContent, 1000);
+
+
 // --------------------------- Auto-refresh logic ---------------------------
-// Try to keep the currently visible room (if any) when refreshing
 async function autoRefreshDesks() {
   const activeViewBtn = document.querySelector(".view-btn.active");
   const activeView = activeViewBtn ? activeViewBtn.dataset.view : null;
-  if (activeView !== "desks") return; // only when desks view active
+  if (activeView !== "desks") return;
 
-  // find currently visible room wrapper id (room-A, room-B, ...)
   const currentRoomWrapper = document.querySelector(".room-wrapper");
   const roomId = currentRoomWrapper ? currentRoomWrapper.id.replace(/^room-/, "") : null;
 
   let url = "/load_view/desks/";
-  if (roomId) url += `?room=Room%20${encodeURIComponent(roomId)}`; // matches your view filter format sometimes "Room A"
+  if (roomId) url += `?room=Room%20${encodeURIComponent(roomId)}`;
 
   try {
     const res = await fetch(url, { cache: "no-store" });
@@ -360,27 +556,30 @@ async function autoRefreshDesks() {
     const main = document.getElementById("main-content");
     if (!main) return;
 
-    // quick compare — if identical, skip DOM replacement
     if (main.innerHTML.trim() === html.trim()) {
       return;
     }
 
     main.innerHTML = html;
-
-    // re-run view button init (they live outside main-content but we ensure everything wired)
     initViewButtons();
-
-    // re-dispatch overviewLoaded so overview navigation logic reattaches listeners
     document.dispatchEvent(new Event("overviewLoaded"));
 
-    // If a desk is currently selected, re-check its pairing status with backend (to sync)
+    // Re-apply selection visual state after HTML replacement
     const selectedDeskId = reservationActions?.dataset?.currentDesk;
     if (selectedDeskId) {
+        const activeBtn = document.querySelector(`.grid-container .btn[data-desk-id="${selectedDeskId}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('selected');
+        }
+
       fetch(`/api/user-status/${encodeURIComponent(selectedDeskId)}/`)
         .then(r => r.json())
         .then(data => {
           if (pairBtn) pairBtn.disabled = !!data.is_paired;
           if (unpairBtn) unpairBtn.disabled = !data.is_paired;
+          if (deskControls) {
+              deskControls.style.display = data.is_paired ? "block" : "none";
+          }
         })
         .catch(() => {});
     }
@@ -389,19 +588,7 @@ async function autoRefreshDesks() {
   }
 }
 
-// start auto-refresh loop (3s recommended; adjust as needed)
 setInterval(autoRefreshDesks, 3000);
-
-// run once on load to make sure UI state is normalized
-document.addEventListener("DOMContentLoaded", () => {
-  ensureElementListeners();
-  // mark active view if none
-  if (!document.querySelector(".view-btn.active")) {
-    const btn = document.querySelector('.view-btn[data-view="desks"]');
-    if (btn) btn.classList.add("active");
-  }
-  // initial pairing status checks won't run until user selects a desk
-});
 
 function refreshDeskStatus() {
   fetch("/api/desks_status/")
@@ -421,29 +608,5 @@ function refreshDeskStatus() {
     });
 }
 
-// Run on load and every 3s
 document.addEventListener("DOMContentLoaded", refreshDeskStatus);
 setInterval(refreshDeskStatus, 3000);
-
-function updateDeskButtons(desksApi) {
-    document.querySelectorAll(".desk-btn").forEach(btn => {
-        const deskId = btn.dataset.deskId;
-        const desk = desksApi[deskId];
-        if (!desk) return;
-
-        // Determine state
-        if (desk.desk_data.state.status !== "Normal" || desk.desk_data.state.isAntiCollision) {
-            btn.classList.add("broken");
-            btn.classList.remove("occupied", "normal");
-            btn.disabled = true;
-        } else if (desk.user) {
-            btn.classList.add("occupied");
-            btn.classList.remove("broken", "normal");
-            btn.disabled = false;
-        } else {
-            btn.classList.add("normal");
-            btn.classList.remove("broken", "occupied");
-            btn.disabled = false;
-        }
-    });
-}

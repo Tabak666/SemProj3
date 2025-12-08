@@ -11,14 +11,21 @@
 
 <div class="side-panel">
   <h3>Control Panel</h3>
+  
+  <div id="deskLoadingOverlay" class="loading-overlay">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p>Adjusting Desk...</p>
+  </div>
+
   {% if request.session.user_id %}
   <div class="panel-section view-section">
     <h4>Views</h4>
     <button class="view-btn" data-view="desks">Desks</button>
     <button class="view-btn" data-view="overview">Overview</button>
   </div>
-    <!-- Reservation Section -->
-  <div id="reservation-section">
+    <div id="reservation-section">
     <h4>Desk Reservation</h4>
     <p id="selectedDesk">No desk selected</p>
     <div id="statusMessage" class="status-message" aria-live="polite" role="status" style="display:none;"></div>
@@ -50,33 +57,19 @@
     </div>
   </div>
 
-  <!-- Height Control -->
-  <div class="panel-section">
-    <label for="heightSlider">Desk Height: <span id="heightValue">100</span> cm</label>
-    <input type="range" id="heightSlider" min="50" max="160" value="65" step="1">
+  <div id="desk-controls" style="display: none;">
+      <div class="panel-section">
+        <label for="heightSlider">Desk Height: <span id="heightValue">100</span> cm</label>
+        <input type="range" id="heightSlider" min="50" max="160" value="65" step="1">
+      </div>
+
+      <div class="panel-section">
+        <h4>Quick Profiles</h4>
+        <button class="profile-btn" data-height="{{ rec_sit }}">Sitting ({{ rec_sit }} cm)</button>
+        <button class="profile-btn" data-height="{{ rec_stand }}">Standing ({{ rec_stand }} cm)</button>
+      </div>
   </div>
 
-  <!-- Saved Configurations -->
-  <div class="panel-section">
-    <h4>Saved Configurations</h4>
-    <select id="configSelect">
-      <option value="">-- Select Configuration --</option>
-      <option value="morning">Morning Work</option>
-      <option value="standing">Standing Mode</option>
-      <option value="break">Break Mode</option>
-    </select>
-    <button id="loadConfig">Load</button>
-  </div>
-
-  <!-- Quick Profiles -->
-  <div class="panel-section">
-    <h4>Quick Profiles</h4>
-    <button class="profile-btn" data-height="70">Profile 1</button>
-    <button class="profile-btn" data-height="100">Profile 2</button>
-    <button class="profile-btn" data-height="120">Profile 3</button>
-  </div>
-
-  <!-- Health Recommendations Toggle -->
   <div class="panel-section">
     <label>
       <input type="checkbox" id="toggleHealth" checked>
@@ -85,12 +78,10 @@
   </div>
 </div>
 {% endif %}
-<!-- Main Grid -->
 <div id="main-content">
   {% include 'partials/desks.html' with rooms=rooms %}
 </div>
 
-<!-- === Health Popup === -->
 <div id="healthPopup" class="health-popup">
   <div class="popup-header">
     <h4 class="popup-title">💡 Health Recommendation</h4>
@@ -102,14 +93,32 @@
   </div>
 </div>
 
+<div class="modal fade" id="moveConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Movement</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to move the desk to <strong id="confirmHeightVal"></strong> cm?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmMoveBtn">Move Desk</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
   const USER_HEIGHT_CM = {{ user_height|default:"176" }};
+  const INITIAL_DESK_ID = "{{ active_desk_id|default:'' }}";
 </script>
 <script type="module" src="{% static 'script/desk.js' %}"></script>
 
 <script src="{% static 'script/overview.js' %}"></script>
 {% endblock %}
-

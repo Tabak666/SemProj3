@@ -12,14 +12,17 @@
     <div class="dashboard-header">
         <h1>Health Dashboard</h1>
         <div class="user-info">
-            <strong>Desk:</strong> {{ metrics.desk_id }} | <strong>Today:</strong> <span id="current-date"></span>
+            <strong>Desk:</strong> DESK 4486 | <strong>Today:</strong> <span id="current-date"></span>
         </div>
+    </div>
 
-            <div class="metric-value" id="metricSitting">{{ metrics.sitting_hours }}h</div>
-            <div class="metric-value" id="metricStanding">{{ metrics.standing_hours }}h</div>
-            <div class="metric-value" id="metricChanges">{{ metrics.changes }}</div>
-            <div class="metric-value" id="metricHealth">{{ metrics.health_score }}/100</div>
-            <div class="metric-subtitle">Last change: <span id="lastChange">{{ metrics.last_change_min_ago }}</span> min ago</div>
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+        <div class="metric-card interactive-card" data-metric="sitting">
+            <div class="metric-icon" style="float: right; font-size: 24px;"></div>
+            <div class="metric-label">Sitting Time Today</div>
+            <div class="metric-value" id="metricSitting">4.2h</div>
+            <div class="metric-subtitle">67% of work time</div>
             <div class="progress-bar">
                 <div class="progress-fill" id="progressSitting" style="width: 67%;"></div>
             </div>
@@ -27,7 +30,7 @@
         </div>
 
         <div class="metric-card interactive-card" data-metric="standing">
-            <div class="metric-icon" style="float: right; font-size: 24px;">🚶</div>
+            <div class="metric-icon" style="float: right; font-size: 24px;"></div>
             <div class="metric-label">Standing Time Today</div>
             <div class="metric-value" id="metricStanding" style="color: #28a745;">2.1h</div>
             <div class="metric-subtitle">33% of work time</div>
@@ -38,7 +41,7 @@
         </div>
 
         <div class="metric-card interactive-card" data-metric="changes">
-            <div class="metric-icon" style="float: right; font-size: 24px;">🔄</div>
+            <div class="metric-icon" style="float: right; font-size: 24px;"></div>
             <div class="metric-label">Position Changes</div>
             <div class="metric-value" id="metricChanges" style="color: #ff6b6b;">12</div>
             <div class="metric-subtitle">Last change: <span id="lastChange">45</span> min ago</div>
@@ -49,7 +52,7 @@
         </div>
 
         <div class="metric-card interactive-card" data-metric="health">
-            <div class="metric-icon" style="float: right; font-size: 24px;">❤️</div>
+            <div class="metric-icon" style="float: right; font-size: 24px;"></div>
             <div class="metric-label">Health Score</div>
             <div class="metric-value" id="metricHealth" style="color: #ffa500;">72/100</div>
             <div class="metric-subtitle">Good balance</div>
