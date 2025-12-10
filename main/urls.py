@@ -19,4 +19,8 @@ urlpatterns = [
     path("api/user-status/<str:desk_id>/", views.user_desk_status, name="user_desk_status"),
     path("api/desks_status/", views.desks_status_api, name="desks_status_api"),
     path('api/set_desk_height/', views.set_desk_height, name='set_desk_height'),
+    path('submit_bug/', views.submit_bug, name='submit_bug'),
+    path('approvals/bugs/', views.admin_bugs_view, name='admin_bugs'),
+    path('approvals/bugs/update/', views.update_bug_status, name='update_bug_status'),
+    path('approvals/bugs/delete/', views.delete_bug, name='delete_bug'),
 ]
