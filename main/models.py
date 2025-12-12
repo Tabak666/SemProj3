@@ -36,29 +36,13 @@ class PasswordResetRequest(models.Model):
     
     class Meta:
         ordering = ['-requested_at']
-        
-class BugReport(models.Model):
-    PRIORITY_CHOICES = [
-        ('low', 'Low'),
-        ('medium', 'Medium'),
-        ('high', 'High'),
-    ]
-    STATUS_CHOICES = [
-        ('open', 'Open'),
-        ('in_progress', 'In Progress'),
-        ('resolved', 'Resolved'),
-        ('closed', 'Closed'),
-    ]
-    
+
+class DeskBooking(models.Model):
     user = models.ForeignKey(Users, on_delete=models.CASCADE)
     desk_id = models.CharField(max_length=50)
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    admin_notes = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"Bug #{self.id} - {self.title}"
+        return f"{self.user.username} booked {self.desk_id} from {self.start_time} to {self.end_time}"

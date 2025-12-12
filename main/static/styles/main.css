@@ -781,6 +781,10 @@ button[disabled] {
 .grid-container .btn.broken {
     background-image: url("/static/Assets/broken.svg");
 }
+
+.grid-container .btn.booked {
+    background-image: url("/static/Assets/booked.svg");
+}
 .grid-container .btn.selected {
   border-color: #327AD9 !important;
   border-width: 4px !important;
