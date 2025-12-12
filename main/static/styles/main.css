@@ -822,3 +822,26 @@ button[disabled] {
   height: 3rem;
   border-width: 0.25em;
 }
+.report-bug-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 16px;
+  background-color: #dc3545 !important;
+  color: white !important;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s, box-shadow 0.2s;
+}
+
+.report-bug-btn:hover {
+  background-color: #b02a37 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+}
+
+.report-bug-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
+}

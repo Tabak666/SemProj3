@@ -22,6 +22,10 @@ const confirmModalEl = safeGet("moveConfirmModal");
 const confirmHeightVal = safeGet("confirmHeightVal");
 const confirmMoveBtn = safeGet("confirmMoveBtn");
 const loadingOverlay = safeGet("deskLoadingOverlay");
+const bugModal = document.getElementById('bugReportModal');
+const reportBtn = document.getElementById('reportBugBtn');
+const closeBugBtn = document.getElementById('closeBugModal');
+const bugForm = document.getElementById('bugReportForm');
 
 let pendingMoveHeight = null;
 let confirmModal = null;
@@ -610,3 +614,63 @@ function refreshDeskStatus() {
 
 document.addEventListener("DOMContentLoaded", refreshDeskStatus);
 setInterval(refreshDeskStatus, 3000);
+if (reportBtn && bugModal) {
+    reportBtn.addEventListener('click', () => {
+        bugModal.style.display = 'flex';
+    });
+
+    // Close logic
+    const closeBug = () => bugModal.style.display = 'none';
+    if(closeBugBtn) closeBugBtn.addEventListener('click', closeBug);
+    
+    // Close on background click
+    bugModal.addEventListener('click', (e) => {
+        if (e.target === bugModal) closeBug();
+    });
+
+    // Handle Submission
+    bugForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const deskId = reservationActions?.dataset?.currentDesk;
+        
+        if (!deskId) {
+            setStatusMessage("No desk selected/paired!", "error");
+            return;
+        }
+
+        const btn = bugForm.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = 'Submitting...';
+
+        const formData = new FormData();
+        formData.append('desk_id', deskId);
+        formData.append('title', document.getElementById('bugTitle').value);
+        formData.append('description', document.getElementById('bugDescription').value);
+        formData.append('priority', document.getElementById('bugPriority').value);
+
+        fetch('/submit_bug/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF_TOKEN },
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                setStatusMessage("Bug reported successfully!", "success");
+                closeBug();
+                bugForm.reset();
+            } else {
+                setStatusMessage(data.message, "error");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            setStatusMessage("Failed to submit bug report", "error");
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+    });
+}

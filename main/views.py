@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 import requests
 from .utils import get_desk_data, pair_user_with_desk, unpair_user
-from .models import UserTablePairs, Users, PasswordResetRequest
+from .models import UserTablePairs, Users, PasswordResetRequest, BugReport
 from django.http import JsonResponse
 from core.api_client.calls import loadDesks, get_desk_by_id, update_desk_height
 from django.core.cache import cache
@@ -11,6 +11,97 @@ from .forms import RegistrationForm, LoginForm, ForgotPasswordForm
 from django.views.decorators.http import require_GET, require_POST
 from django.utils import timezone
 
+@require_POST
+def submit_bug(request):
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({'success': False, 'message': 'Not logged in'}, status=401)
+    
+    try:
+        user = Users.objects.get(id=user_id)
+        desk_id = request.POST.get('desk_id')
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        priority = request.POST.get('priority', 'medium')
+
+        if not desk_id or not title or not description:
+            return JsonResponse({'success': False, 'message': 'Missing required fields'})
+
+        # Validation: User must be paired with the desk they are reporting
+        is_paired = UserTablePairs.objects.filter(
+            user_id=user, 
+            desk_id=desk_id, 
+            end_time__isnull=True
+        ).exists()
+
+        if not is_paired:
+            return JsonResponse({'success': False, 'message': 'You are not paired with this desk'}, status=403)
+
+        BugReport.objects.create(
+            user=user,
+            desk_id=desk_id,
+            title=title,
+            description=description,
+            priority=priority
+        )
+        return JsonResponse({'success': True, 'message': 'Bug report submitted successfully'})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+def admin_bugs_view(request):
+    if not request.session.get('user_id') or request.session.get('role') != 'admin':
+        return redirect('index')
+    
+    bugs = BugReport.objects.select_related('user').all().order_by('-created_at')
+    
+    context = {
+        'bugs': bugs,
+        'open_count': bugs.filter(status='open').count(),
+        'high_priority_count': bugs.filter(priority='high', status__in=['open', 'in_progress']).count(),
+        'resolved_count': bugs.filter(status='resolved').count(),
+    }
+
+    return render(request, 'admin_bugs.html', context)
+
+@require_POST
+def update_bug_status(request):
+    if not request.session.get('user_id') or request.session.get('role') != 'admin':
+        return redirect('index')
+        
+    bug_id = request.POST.get('bug_id')
+    status = request.POST.get('status')
+    notes = request.POST.get('admin_notes')
+    
+    try:
+        bug = BugReport.objects.get(id=bug_id)
+        if status:
+            bug.status = status
+        if notes is not None:
+            bug.admin_notes = notes
+        bug.save()
+        messages.success(request, f"Bug #{bug.id} updated.")
+    except BugReport.DoesNotExist:
+        messages.error(request, "Bug report not found.")
+        
+    return redirect('admin_bugs')
+@require_POST
+def delete_bug(request):
+    if not request.session.get('user_id') or request.session.get('role') != 'admin':
+        return redirect('index')
+    
+    bug_id = request.POST.get('bug_id')
+    try:
+        bug = BugReport.objects.get(id=bug_id)
+        if bug.status in ['resolved', 'closed']:
+            bug.delete()
+            messages.success(request, f"Bug #{bug_id} deleted successfully.")
+        else:
+            messages.warning(request, "Only Resolved or Closed bugs can be deleted.")
+    except BugReport.DoesNotExist:
+        messages.error(request, "Bug report not found.")
+        
+    return redirect('admin_bugs')
 
 def index(request):
     desks_api = cache.get("latest_desk_data") or []
