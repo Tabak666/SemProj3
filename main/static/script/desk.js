@@ -454,18 +454,43 @@ cancelBooking?.addEventListener("click", () => {
   if (bookStart) bookStart.value = "";
   if (bookEnd) bookEnd.value = "";
 });
-bookBtn?.addEventListener("click", () => {
+bookBtn?.addEventListener("click", async () => {
   const deskId = reservationActions?.dataset?.currentDesk;
   if (!deskId) return setStatusMessage("Select a desk first.", "error");
   if (!bookStart?.value || !bookEnd?.value) return setStatusMessage("Please select start and end time.", "error");
 
-  window.desks[deskId] = { status: "booked", start: bookStart.value, end: bookEnd.value };
-  bookingForm.style.display = "none";
-  setStatusMessage(`Desk ${deskId} booked from ${bookStart.value} to ${bookEnd.value}`);
-  if (pairBtn) pairBtn.disabled = true;
-  if (unpairBtn) unpairBtn.disabled = false;
-  bookStart.value = "";
-  bookEnd.value = "";
+  const formData = new FormData();
+  formData.append("desk_id", deskId);
+  formData.append("start_time", bookStart.value);
+  formData.append("end_time", bookEnd.value);
+
+  try {
+    const resp = await fetch("/desk/book/", {
+      method: "POST",
+      headers: { "X-CSRFToken": CSRF_TOKEN },
+      body: formData
+    });
+    const data = await resp.json();
+    setStatusMessage(data.message, data.success ? "success" : "error");
+
+    if (data.success) {
+      bookingForm.style.display = "none";
+      if (pairBtn) pairBtn.disabled = true;
+      if (unpairBtn) unpairBtn.disabled = false;
+      bookStart.value = "";
+      bookEnd.value = "";
+
+      // Update local state for immediate UI feedback
+      window.desks[deskId] = { status: "booked", start: formData.get("start_time"), end: formData.get("end_time") };
+      const deskBtn = document.querySelector(`.grid-container .btn[data-desk-id="${deskId}"]`);
+      if (deskBtn) {
+        deskBtn.classList.add("booked");
+        deskBtn.title = `Booked from ${formData.get("start_time")} to ${formData.get("end_time")}`;
+      }
+    }
+  } catch (err) {
+    setStatusMessage("Booking request failed.", "error");
+  }
 });
 
 // --------------------------- View switching ---------------------------
