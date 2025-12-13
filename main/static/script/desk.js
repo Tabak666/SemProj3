@@ -8,27 +8,18 @@ function getCookie(name) {
 const CSRF_TOKEN = getCookie('csrftoken');
 
 // --------------------------- Height / Popup / Loading ---------------------------
-const slider = safeGet("heightSlider");
-const valueLabel = safeGet("heightValue");
-const popup = safeGet("healthPopup");
-const message = safeGet("healthMessage");
-const acceptBtn = safeGet("acceptBtn");
-const ignoreBtn = safeGet("ignoreBtn");
-const toggleHealth = safeGet("toggleHealth");
-const deskControls = safeGet("desk-controls");
-
-// New Elements for Confirmation & Loading
-const confirmModalEl = safeGet("moveConfirmModal");
-const confirmHeightVal = safeGet("confirmHeightVal");
-const confirmMoveBtn = safeGet("confirmMoveBtn");
-const loadingOverlay = safeGet("deskLoadingOverlay");
+const slider = document.getElementById("heightSlider");
+const valueLabel = document.getElementById("heightValue");
+const popup = document.getElementById("healthPopup");
+const message = document.getElementById("healthMessage");
+const acceptBtn = document.getElementById("acceptBtn");
+const ignoreBtn = document.getElementById("ignoreBtn");
+const toggleHealth = document.getElementById("toggleHealth");
+const deskControls = document.getElementById("desk-controls");
+const loadingOverlay = document.getElementById("deskLoadingOverlay");
 
 let pendingMoveHeight = null;
 let confirmModal = null;
-
-if (confirmModalEl && typeof bootstrap !== 'undefined') {
-    confirmModal = new bootstrap.Modal(confirmModalEl);
-}
 
 if (typeof USER_HEIGHT_CM === 'undefined') {
   window.USER_HEIGHT_CM = 176;
@@ -160,7 +151,7 @@ function requestDeskMovement(height) {
 }
 
 // 2. Execute Movement (Triggers API + Loading + Monitoring)
-function executeDeskMovement(height) {
+async function executeDeskMovement(height) {
     const deskId = reservationActions?.dataset?.currentDesk;
     if (!deskId) return;
 
@@ -174,13 +165,14 @@ function executeDeskMovement(height) {
     formData.append("desk_id", deskId);
     formData.append("height", height);
 
-    fetch("/api/set_desk_height/", {
-        method: "POST",
-        headers: { "X-CSRFToken": CSRF_TOKEN },
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
+    try {
+        const response = await fetch("/api/set_desk_height/", {
+            method: "POST",
+            headers: { "X-CSRFToken": CSRF_TOKEN },
+            body: formData
+        });
+
+        const data = await response.json();
         if (!data.success) {
             if (loadingOverlay) loadingOverlay.classList.remove("active");
             setStatusMessage(data.message, "error");
@@ -188,12 +180,11 @@ function executeDeskMovement(height) {
             // ✅ SUCCESS: Now wait for it to actually move
             monitorDeskMovement(deskId, height);
         }
-    })
-    .catch(err => {
+    } catch (err) {
         console.error("Height update failed", err);
         if (loadingOverlay) loadingOverlay.classList.remove("active");
         setStatusMessage("Connection failed", "error");
-    });
+    }
 }
 
 // 3. Confirm Button Listener
@@ -216,7 +207,6 @@ if (slider && valueLabel && toggleHealth) {
 
   slider.addEventListener("change", () => {
     const height = parseInt(slider.value);
-    
     const hasActiveDesk = Object.values(window.desks || {}).some(d => d.status === "booked" || d.status === "paired");
     const deskId = reservationActions?.dataset?.currentDesk;
     
@@ -484,10 +474,9 @@ function initViewButtons() {
       let url = `/load_view/${view}/`;
 
       if (view === 'desks') {
-          const storedRoom = sessionStorage.getItem("lastDeskRoom");
-          if (storedRoom) {
-              url += `?room=Room%20${encodeURIComponent(storedRoom)}`;
-          }
+          const storedRoom = sessionStorage.getItem("lastDeskRoom") || "A";
+          console.log(`[desk.js] Loading desks for room: ${storedRoom}`);
+          url += `?room=Room%20${encodeURIComponent(storedRoom)}`;
       }
 
       fetch(url)
@@ -498,6 +487,7 @@ function initViewButtons() {
           main.innerHTML = html;
           document.dispatchEvent(new Event("viewChanged"));
           document.dispatchEvent(new Event("overviewLoaded"));
+          console.log(`[desk.js] Loaded view: ${view}`);
         })
         .catch(err => console.error("Failed to load view:", err));
     });
@@ -539,57 +529,10 @@ setInterval(syncStateWithContent, 1000);
 
 
 // --------------------------- Auto-refresh logic ---------------------------
-async function autoRefreshDesks() {
-  const activeViewBtn = document.querySelector(".view-btn.active");
-  const activeView = activeViewBtn ? activeViewBtn.dataset.view : null;
-  if (activeView !== "desks") return;
+// ✅ REMOVED: autoRefreshDesks() interval - it was causing blinking
+// The index.html now handles room-based refreshing via loadDesksForRoom()
 
-  const currentRoomWrapper = document.querySelector(".room-wrapper");
-  const roomId = currentRoomWrapper ? currentRoomWrapper.id.replace(/^room-/, "") : null;
-
-  let url = "/load_view/desks/";
-  if (roomId) url += `?room=Room%20${encodeURIComponent(roomId)}`;
-
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    const html = await res.text();
-    const main = document.getElementById("main-content");
-    if (!main) return;
-
-    if (main.innerHTML.trim() === html.trim()) {
-      return;
-    }
-
-    main.innerHTML = html;
-    initViewButtons();
-    document.dispatchEvent(new Event("overviewLoaded"));
-
-    // Re-apply selection visual state after HTML replacement
-    const selectedDeskId = reservationActions?.dataset?.currentDesk;
-    if (selectedDeskId) {
-        const activeBtn = document.querySelector(`.grid-container .btn[data-desk-id="${selectedDeskId}"]`);
-        if (activeBtn) {
-            activeBtn.classList.add('selected');
-        }
-
-      fetch(`/api/user-status/${encodeURIComponent(selectedDeskId)}/`)
-        .then(r => r.json())
-        .then(data => {
-          if (pairBtn) pairBtn.disabled = !!data.is_paired;
-          if (unpairBtn) unpairBtn.disabled = !data.is_paired;
-          if (deskControls) {
-              deskControls.style.display = data.is_paired ? "block" : "none";
-          }
-        })
-        .catch(() => {});
-    }
-  } catch (err) {
-    console.error("Auto-refresh error:", err);
-  }
-}
-
-setInterval(autoRefreshDesks, 3000);
-
+// ✅ Keep only the status refresh (doesn't update main content)
 function refreshDeskStatus() {
   fetch("/api/desks_status/")
     .then(r => r.json())
@@ -609,4 +552,4 @@ function refreshDeskStatus() {
 }
 
 document.addEventListener("DOMContentLoaded", refreshDeskStatus);
-setInterval(refreshDeskStatus, 3000);
+setInterval(refreshDeskStatus, 3000);  // ✅ Keep this - just updates occupied status, not DOM structure

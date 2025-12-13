@@ -5,13 +5,14 @@
 
     {% for room, desks in rooms.items %}
     <div class="room-wrapper" id="room-{{ room }}">
-        <h3>Room {{ room }}</h3>
+        <h3 style="position: relative; z-index: 10;">Room {{ room }}</h3>
         <div class="room-block">
             {% for entry in desks %}
                 {% if entry.desk %}
                     <button class="btn btn{{ forloop.counter }}"
-                        data-desk-id="{{ entry.desk.mac_address }}"
-                        data-desk-number="{{ entry.number }}">
+                        data-desk-id="{{ entry.desk.mac }}"
+                        data-desk-number="{{ entry.number }}"
+                        title="{{ entry.desk.name }}">
                         {{ entry.number }}
                     </button>
                 {% else %}
