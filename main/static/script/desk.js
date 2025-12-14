@@ -8,18 +8,31 @@ function getCookie(name) {
 const CSRF_TOKEN = getCookie('csrftoken');
 
 // --------------------------- Height / Popup / Loading ---------------------------
-const slider = document.getElementById("heightSlider");
-const valueLabel = document.getElementById("heightValue");
-const popup = document.getElementById("healthPopup");
-const message = document.getElementById("healthMessage");
-const acceptBtn = document.getElementById("acceptBtn");
-const ignoreBtn = document.getElementById("ignoreBtn");
-const toggleHealth = document.getElementById("toggleHealth");
-const deskControls = document.getElementById("desk-controls");
-const loadingOverlay = document.getElementById("deskLoadingOverlay");
+const slider = safeGet("heightSlider");
+const valueLabel = safeGet("heightValue");
+const popup = safeGet("healthPopup");
+const message = safeGet("healthMessage");
+const acceptBtn = safeGet("acceptBtn");
+const ignoreBtn = safeGet("ignoreBtn");
+const toggleHealth = safeGet("toggleHealth");
+const deskControls = safeGet("desk-controls");
+
+// New Elements for Confirmation & Loading
+const confirmModalEl = safeGet("moveConfirmModal");
+const confirmHeightVal = safeGet("confirmHeightVal");
+const confirmMoveBtn = safeGet("confirmMoveBtn");
+const loadingOverlay = safeGet("deskLoadingOverlay");
+const bugModal = document.getElementById('bugReportModal');
+const reportBtn = document.getElementById('reportBugBtn');
+const closeBugBtn = document.getElementById('closeBugModal');
+const bugForm = document.getElementById('bugReportForm');
 
 let pendingMoveHeight = null;
 let confirmModal = null;
+
+if (confirmModalEl && typeof bootstrap !== 'undefined') {
+    confirmModal = new bootstrap.Modal(confirmModalEl);
+}
 
 if (typeof USER_HEIGHT_CM === 'undefined') {
   window.USER_HEIGHT_CM = 176;
@@ -444,18 +457,43 @@ cancelBooking?.addEventListener("click", () => {
   if (bookStart) bookStart.value = "";
   if (bookEnd) bookEnd.value = "";
 });
-bookBtn?.addEventListener("click", () => {
+bookBtn?.addEventListener("click", async () => {
   const deskId = reservationActions?.dataset?.currentDesk;
   if (!deskId) return setStatusMessage("Select a desk first.", "error");
   if (!bookStart?.value || !bookEnd?.value) return setStatusMessage("Please select start and end time.", "error");
 
-  window.desks[deskId] = { status: "booked", start: bookStart.value, end: bookEnd.value };
-  bookingForm.style.display = "none";
-  setStatusMessage(`Desk ${deskId} booked from ${bookStart.value} to ${bookEnd.value}`);
-  if (pairBtn) pairBtn.disabled = true;
-  if (unpairBtn) unpairBtn.disabled = false;
-  bookStart.value = "";
-  bookEnd.value = "";
+  const formData = new FormData();
+  formData.append("desk_id", deskId);
+  formData.append("start_time", bookStart.value);
+  formData.append("end_time", bookEnd.value);
+
+  try {
+    const resp = await fetch("/desk/book/", {
+      method: "POST",
+      headers: { "X-CSRFToken": CSRF_TOKEN },
+      body: formData
+    });
+    const data = await resp.json();
+    setStatusMessage(data.message, data.success ? "success" : "error");
+
+    if (data.success) {
+      bookingForm.style.display = "none";
+      if (pairBtn) pairBtn.disabled = true;
+      if (unpairBtn) unpairBtn.disabled = false;
+      bookStart.value = "";
+      bookEnd.value = "";
+
+      // Update local state for immediate UI feedback
+      window.desks[deskId] = { status: "booked", start: formData.get("start_time"), end: formData.get("end_time") };
+      const deskBtn = document.querySelector(`.grid-container .btn[data-desk-id="${deskId}"]`);
+      if (deskBtn) {
+        deskBtn.classList.add("booked");
+        deskBtn.title = `Booked from ${formData.get("start_time")} to ${formData.get("end_time")}`;
+      }
+    }
+  } catch (err) {
+    setStatusMessage("Booking request failed.", "error");
+  }
 });
 
 // --------------------------- View switching ---------------------------
@@ -552,4 +590,68 @@ function refreshDeskStatus() {
 }
 
 document.addEventListener("DOMContentLoaded", refreshDeskStatus);
+<<<<<<< HEAD
 setInterval(refreshDeskStatus, 3000);  // ✅ Keep this - just updates occupied status, not DOM structure
+=======
+setInterval(refreshDeskStatus, 3000);
+if (reportBtn && bugModal) {
+    reportBtn.addEventListener('click', () => {
+        bugModal.style.display = 'flex';
+    });
+
+    // Close logic
+    const closeBug = () => bugModal.style.display = 'none';
+    if(closeBugBtn) closeBugBtn.addEventListener('click', closeBug);
+    
+    // Close on background click
+    bugModal.addEventListener('click', (e) => {
+        if (e.target === bugModal) closeBug();
+    });
+
+    // Handle Submission
+    bugForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const deskId = reservationActions?.dataset?.currentDesk;
+        
+        if (!deskId) {
+            setStatusMessage("No desk selected/paired!", "error");
+            return;
+        }
+
+        const btn = bugForm.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = 'Submitting...';
+
+        const formData = new FormData();
+        formData.append('desk_id', deskId);
+        formData.append('title', document.getElementById('bugTitle').value);
+        formData.append('description', document.getElementById('bugDescription').value);
+        formData.append('priority', document.getElementById('bugPriority').value);
+
+        fetch('/submit_bug/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF_TOKEN },
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                setStatusMessage("Bug reported successfully!", "success");
+                closeBug();
+                bugForm.reset();
+            } else {
+                setStatusMessage(data.message, "error");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            setStatusMessage("Failed to submit bug report", "error");
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+    });
+}
+>>>>>>> master

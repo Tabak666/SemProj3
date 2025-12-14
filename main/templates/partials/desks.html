@@ -8,21 +8,31 @@
         <h3 style="position: relative; z-index: 10;">Room {{ room }}</h3>
         <div class="room-block">
             {% for entry in desks %}
-                {% if entry.desk %}
-                    <button class="btn btn{{ forloop.counter }}"
-                        data-desk-id="{{ entry.desk.mac }}"
-                        data-desk-number="{{ entry.number }}"
-                        title="{{ entry.desk.name }}">
+                {% if entry.is_broken %}
+                    <button class="btn btn{{ forloop.counter }} broken"
+                            data-desk-id=""
+                            data-desk-number="{{ entry.number }}"
+                            disabled>
                         {{ entry.number }}
                     </button>
+
+                {% elif entry.desk %}
+                    <button class="btn btn{{ forloop.counter }} normal{% if entry.is_booked %} booked{% endif %}"
+                            data-desk-id="{{ entry.desk.mac_address }}"
+                            data-desk-number="{{ entry.number }}">
+                        {{ entry.number }}
+                    </button>
+
                 {% else %}
                     <button class="btn btn{{ forloop.counter }} empty"
-                        data-desk-id=""
-                        data-desk-number="{{ entry.number }}">
+                            data-desk-id=""
+                            data-desk-number="{{ entry.number }}">
                         {{ entry.number }}
                     </button>
                 {% endif %}
+
             {% endfor %}
+
         </div>
     </div>
     {% endfor %}

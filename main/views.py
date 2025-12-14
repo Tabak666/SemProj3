@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 import requests
-from .utils import get_desk_data, pair_user_with_desk, unpair_user
-from .models import UserTablePairs, Users, PasswordResetRequest
+from .utils import get_desk_data, pair_user_with_desk, unpair_user, mark_bookings
+from .models import UserTablePairs, Users, PasswordResetRequest, BugReport, DeskBooking
 from django.http import JsonResponse
 from core.api_client.calls import loadDesks, get_desk_by_id, update_desk_height
 from django.core.cache import cache
@@ -11,7 +11,100 @@ from .forms import RegistrationForm, LoginForm, ForgotPasswordForm
 from django.views.decorators.http import require_GET, require_POST
 from django.utils import timezone
 from tableAPI.desk_store import load_desks  # ✅ Add this import
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.dateparse import parse_datetime
 
+@require_POST
+def submit_bug(request):
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({'success': False, 'message': 'Not logged in'}, status=401)
+    
+    try:
+        user = Users.objects.get(id=user_id)
+        desk_id = request.POST.get('desk_id')
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        priority = request.POST.get('priority', 'medium')
+
+        if not desk_id or not title or not description:
+            return JsonResponse({'success': False, 'message': 'Missing required fields'})
+
+        # Validation: User must be paired with the desk they are reporting
+        is_paired = UserTablePairs.objects.filter(
+            user_id=user, 
+            desk_id=desk_id, 
+            end_time__isnull=True
+        ).exists()
+
+        if not is_paired:
+            return JsonResponse({'success': False, 'message': 'You are not paired with this desk'}, status=403)
+
+        BugReport.objects.create(
+            user=user,
+            desk_id=desk_id,
+            title=title,
+            description=description,
+            priority=priority
+        )
+        return JsonResponse({'success': True, 'message': 'Bug report submitted successfully'})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+def admin_bugs_view(request):
+    if not request.session.get('user_id') or request.session.get('role') != 'admin':
+        return redirect('index')
+    
+    bugs = BugReport.objects.select_related('user').all().order_by('-created_at')
+    
+    context = {
+        'bugs': bugs,
+        'open_count': bugs.filter(status='open').count(),
+        'high_priority_count': bugs.filter(priority='high', status__in=['open', 'in_progress']).count(),
+        'resolved_count': bugs.filter(status='resolved').count(),
+    }
+
+    return render(request, 'admin_bugs.html', context)
+
+@require_POST
+def update_bug_status(request):
+    if not request.session.get('user_id') or request.session.get('role') != 'admin':
+        return redirect('index')
+        
+    bug_id = request.POST.get('bug_id')
+    status = request.POST.get('status')
+    notes = request.POST.get('admin_notes')
+    
+    try:
+        bug = BugReport.objects.get(id=bug_id)
+        if status:
+            bug.status = status
+        if notes is not None:
+            bug.admin_notes = notes
+        bug.save()
+        messages.success(request, f"Bug #{bug.id} updated.")
+    except BugReport.DoesNotExist:
+        messages.error(request, "Bug report not found.")
+        
+    return redirect('admin_bugs')
+@require_POST
+def delete_bug(request):
+    if not request.session.get('user_id') or request.session.get('role') != 'admin':
+        return redirect('index')
+    
+    bug_id = request.POST.get('bug_id')
+    try:
+        bug = BugReport.objects.get(id=bug_id)
+        if bug.status in ['resolved', 'closed']:
+            bug.delete()
+            messages.success(request, f"Bug #{bug_id} deleted successfully.")
+        else:
+            messages.warning(request, "Only Resolved or Closed bugs can be deleted.")
+    except BugReport.DoesNotExist:
+        messages.error(request, "Bug report not found.")
+        
+    return redirect('admin_bugs')
 
 def index(request):
     desks_api = cache.get("latest_desk_data") or []
@@ -34,6 +127,10 @@ def index(request):
             })
             if desk:
                 desk_number += 1
+
+    # Mark which desks are booked
+    for room in rooms:
+        rooms[room] = mark_bookings(rooms[room])
 
     default_room = {'A': rooms['A']}
     user_height = 176 
@@ -239,18 +336,38 @@ def desk(request):
 def pair_desk_view(request):
     if request.method != "POST" or not request.session.get("user_id"):
         return JsonResponse({"success": False, "message": "Not logged in"})
+    
     user = Users.objects.get(id=request.session["user_id"])
     desk_id = request.POST.get("desk_id")
     if not desk_id:
         return JsonResponse({"success": False, "message": "No desk selected"})
+
+    # Prevent pairing if someone else is paired
     existing = UserTablePairs.objects.filter(desk_id=desk_id, end_time__isnull=True).first()
     if existing:
         return JsonResponse({
             "success": False,
             "message": f"Desk already occupied by {existing.user_id.username}"
         })
+
+    # Prevent pairing if someone else has booked it right now
+    from django.utils import timezone
+    now = timezone.now()
+    booked = DeskBooking.objects.filter(
+        desk_id=desk_id,
+        start_time__lte=now,
+        end_time__gte=now
+    ).exclude(user=user).exists()
+    if booked:
+        return JsonResponse({
+            "success": False,
+            "message": "Desk is booked by another user"
+        })
+
+    # Unpair user from any previous desk
     UserTablePairs.objects.filter(user_id=user, end_time__isnull=True).update(end_time=timezone.now())
     UserTablePairs.objects.create(user_id=user, desk_id=desk_id, start_time=timezone.now())
+
     return JsonResponse({"success": True, "message": f"Paired with desk {desk_id}"})
 
 def unpair_desk_view(request):
@@ -355,3 +472,38 @@ def set_desk_height(request):
         return JsonResponse({"success": True, "message": f"Height set to {height}cm"})
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=500)
+    
+
+@csrf_exempt
+@require_POST
+def book_desk_view(request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"success": False, "message": "Not logged in"}, status=401)
+
+    desk_id = request.POST.get("desk_id")
+    start = request.POST.get("start_time")
+    end = request.POST.get("end_time")
+    if not desk_id or not start or not end:
+        return JsonResponse({"success": False, "message": "Missing parameters"}, status=400)
+
+    try:
+        start_time = parse_datetime(start)
+        end_time = parse_datetime(end)
+        if not start_time or not end_time:
+            raise ValueError("Invalid datetime format")
+    except Exception:
+        return JsonResponse({"success": False, "message": "Invalid datetime format"}, status=400)
+
+    # Check for overlapping bookings
+    overlap = DeskBooking.objects.filter(
+        desk_id=desk_id,
+        start_time__lt=end_time,
+        end_time__gt=start_time
+    ).exists()
+    if overlap:
+        return JsonResponse({"success": False, "message": "Desk already booked for this time"})
+
+    user = Users.objects.get(id=user_id)
+    DeskBooking.objects.create(user=user, desk_id=desk_id, start_time=start_time, end_time=end_time)
+    return JsonResponse({"success": True, "message": f"Desk {desk_id} booked from {start_time} to {end_time}"})
