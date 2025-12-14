@@ -1,5 +1,5 @@
 from django.urls import path
-from . import (
+from .views import (
     index, login_view, register_view, dashboard_view, load_view, overview,
     desk, logout_view, approvals_view, forgot_password_view,
     pair_desk_view, unpair_desk_view, user_desk_status,
