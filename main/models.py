@@ -62,3 +62,12 @@ class BugReport(models.Model):
 
     def __str__(self):
         return f"Bug #{self.id} - {self.title}"
+class DeskBooking(models.Model):
+    user = models.ForeignKey(Users, on_delete=models.CASCADE)
+    desk_id = models.CharField(max_length=50)
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} booked {self.desk_id} from {self.start_time} to {self.end_time}"

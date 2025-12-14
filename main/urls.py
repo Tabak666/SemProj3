@@ -1,26 +1,30 @@
-# main/urls.py
-
 from django.urls import path
-from . import views
+from . import (
+    index, login_view, register_view, dashboard_view, load_view, overview,
+    desk, logout_view, approvals_view, forgot_password_view,
+    pair_desk_view, unpair_desk_view, user_desk_status,
+    desks_status_api, set_desk_height, book_desk_view, delete_bug, update_bug_status, admin_bugs_view, submit_bug
+)
 
 urlpatterns = [
-    path('', views.index, name='index'),
-    path('login/', views.login_view, name='login'),
-    path('register/', views.register_view, name='register'),
-    path('dashboard/',views.dashboard_view, name='dashboard'),
-    path('load_view/<str:view_name>/', views.load_view, name='load_view'),
-    path('overview/', views.overview, name="overview"),
-    path("desk/", views.desk, name="desk_view"),
-    path('logout/', views.logout_view, name='logout'),
-    path('approvals/', views.approvals_view, name='approvals'),
-    path('forgot-password/', views.forgot_password_view, name='forgot_password'),
-    path('pair_desk/', views.pair_desk_view, name='pair_desk'),
-    path('unpair_desk/', views.unpair_desk_view, name='unpair_desk'),
-    path("api/user-status/<str:desk_id>/", views.user_desk_status, name="user_desk_status"),
-    path("api/desks_status/", views.desks_status_api, name="desks_status_api"),
-    path('api/set_desk_height/', views.set_desk_height, name='set_desk_height'),
-    path('submit_bug/', views.submit_bug, name='submit_bug'),
-    path('approvals/bugs/', views.admin_bugs_view, name='admin_bugs'),
-    path('approvals/bugs/update/', views.update_bug_status, name='update_bug_status'),
-    path('approvals/bugs/delete/', views.delete_bug, name='delete_bug'),
+    path('', index, name='index'),
+    path('login/', login_view, name='login'),
+    path('register/', register_view, name='register'),
+    path('dashboard/', dashboard_view, name='dashboard'),
+    path('load_view/<str:view_name>/', load_view, name='load_view'),
+    path('overview/', overview, name="overview"),
+    path("desk/", desk, name="desk_view"),
+    path('logout/', logout_view, name='logout'),
+    path('approvals/', approvals_view, name='approvals'),
+    path('forgot-password/', forgot_password_view, name='forgot_password'),
+    path('pair_desk/', pair_desk_view, name='pair_desk'),
+    path('unpair_desk/', unpair_desk_view, name='unpair_desk'),
+    path("api/user-status/<str:desk_id>/", user_desk_status, name="user_desk_status"),
+    path("api/desks_status/", desks_status_api, name="desks_status_api"),
+    path('api/set_desk_height/', set_desk_height, name='set_desk_height'),
+    path('submit_bug/', submit_bug, name='submit_bug'),
+    path('approvals/bugs/', admin_bugs_view, name='admin_bugs'),
+    path('approvals/bugs/update/', update_bug_status, name='update_bug_status'),
+    path('approvals/bugs/delete/', delete_bug, name='delete_bug'),
+    path('desk/book/', book_desk_view, name='book_desk'),
 ]
