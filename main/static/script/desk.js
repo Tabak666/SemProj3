@@ -369,8 +369,9 @@ function activateDeskPanel(deskId) {
     });
 }
 
-document.getElementById("main-content")?.addEventListener("click", (e) => {
-  const btn = e.target.closest(".btn");
+// Use event delegation on document to handle dynamically added desk buttons
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("#main-content .btn");
   if (!btn) return;
 
   const deskId = btn.dataset.deskId;
@@ -496,40 +497,25 @@ bookBtn?.addEventListener("click", async () => {
   }
 });
 
-// --------------------------- View switching ---------------------------
+// View switching disabled - only Overview button available
 function initViewButtons() {
-  document.querySelectorAll(".view-btn").forEach(button => {
-    const clone = button.cloneNode(true);
-    button.parentNode.replaceChild(clone, button);
-  });
-
-  document.querySelectorAll(".view-btn").forEach(button => {
-    button.addEventListener("click", () => {
-      document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
-      button.classList.add("active");
-
-      const view = button.dataset.view;
-      let url = `/load_view/${view}/`;
-
-      if (view === 'desks') {
-          const storedRoom = sessionStorage.getItem("lastDeskRoom") || "A";
-          console.log(`[desk.js] Loading desks for room: ${storedRoom}`);
-          url += `?room=Room%20${encodeURIComponent(storedRoom)}`;
+  const overviewBtn = document.querySelector('.view-btn[data-view="overview"]');
+  if (overviewBtn) {
+    overviewBtn.addEventListener('click', async () => {
+      try {
+        const response = await fetch('/load_view/overview/');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const html = await response.text();
+        document.getElementById('main-content').innerHTML = html;
+        document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+        overviewBtn.classList.add('active');
+        document.dispatchEvent(new Event('viewChanged'));
+        document.dispatchEvent(new Event('overviewLoaded'));
+      } catch (error) {
+        console.error('Error loading overview:', error);
       }
-
-      fetch(url)
-        .then(res => res.text())
-        .then(html => {
-          const main = document.getElementById("main-content");
-          if (!main) return;
-          main.innerHTML = html;
-          document.dispatchEvent(new Event("viewChanged"));
-          document.dispatchEvent(new Event("overviewLoaded"));
-          console.log(`[desk.js] Loaded view: ${view}`);
-        })
-        .catch(err => console.error("Failed to load view:", err));
     });
-  });
+  }
 }
 initViewButtons();
 
@@ -590,10 +576,9 @@ function refreshDeskStatus() {
 }
 
 document.addEventListener("DOMContentLoaded", refreshDeskStatus);
-<<<<<<< HEAD
 setInterval(refreshDeskStatus, 3000);  // ✅ Keep this - just updates occupied status, not DOM structure
-=======
-setInterval(refreshDeskStatus, 3000);
+
+// Bug Report Modal Handler
 if (reportBtn && bugModal) {
     reportBtn.addEventListener('click', () => {
         bugModal.style.display = 'flex';
@@ -654,4 +639,3 @@ if (reportBtn && bugModal) {
         });
     });
 }
->>>>>>> master

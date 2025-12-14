@@ -442,8 +442,9 @@ button[disabled] {
 }
 
 .view-section .view-btn {
-  width: 48%; /* so two fit side by side */
-  display: inline-block;
+  width: 100%; /* stretch full width */
+  display: block;
+  margin-bottom: 8px;
 }
 
 .empty {
