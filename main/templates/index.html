@@ -22,25 +22,25 @@
 
   {% if request.session.user_id %}
   <div class="panel-section view-section">
-    <h4>Views</h4>
-    <button class="view-btn" data-view="desks">Desks</button>
+    <h4>Switch Room/Floor</h4>
     <button class="view-btn" data-view="overview">Overview</button>
   </div>
-    <div id="reservation-section">
+  
+  <div id="reservation-section">
     <h4>Desk Reservation</h4>
     <p id="selectedDesk">No desk selected</p>
     <div id="statusMessage" class="status-message" aria-live="polite" role="status" style="display:none;"></div>
 
     <div id="reservationActions" style="display:none; margin-bottom:45px;">
       <form id="pairForm" method="POST" action="{% url 'pair_desk' %}">
-      {% csrf_token %}
-          <input type="hidden" name="desk_id" id="pairDeskId">
-          <button type="submit" id="pairBtn">Pair (Now)</button>
+        {% csrf_token %}
+        <input type="hidden" name="desk_id" id="pairDeskId">
+        <button type="submit" id="pairBtn">Pair (Now)</button>
       </form>
 
       <form id="unpairForm" method="POST" action="{% url 'unpair_desk' %}">
-          {% csrf_token %}
-          <button type="submit" id="unpairBtn" disabled>Unpair</button>
+        {% csrf_token %}
+        <button type="submit" id="unpairBtn" disabled>Unpair</button>
       </form>
 
       <button id="showBooking">Book for Later</button>
@@ -59,19 +59,19 @@
   </div>
 
   <div id="desk-controls" style="display: none;">
-      <div class="panel-section">
-        <label for="heightSlider">Desk Height: <span id="heightValue">100</span> cm</label>
-        <input type="range" id="heightSlider" min="50" max="160" value="65" step="1">
-      </div>
+    <div class="panel-section">
+      <label for="heightSlider">Desk Height: <span id="heightValue">100</span> cm</label>
+      <input type="range" id="heightSlider" min="50" max="160" value="65" step="1">
+    </div>
 
-      <div class="panel-section">
-        <h4>Quick Profiles</h4>
-        <button class="profile-btn" data-height="{{ rec_sit }}">Sitting ({{ rec_sit }} cm)</button>
-        <button class="profile-btn" data-height="{{ rec_stand }}">Standing ({{ rec_stand }} cm)</button>
-      </div>
-      <div class="panel-section">
-        <button id="reportBugBtn" class="report-bug-btn">Report Bug</button>
-      </div>
+    <div class="panel-section">
+      <h4>Quick Profiles</h4>
+      <button class="profile-btn" data-height="{{ rec_sit }}">Sitting ({{ rec_sit }} cm)</button>
+      <button class="profile-btn" data-height="{{ rec_stand }}">Standing ({{ rec_stand }} cm)</button>
+    </div>
+    <div class="panel-section">
+      <button id="reportBugBtn" class="report-bug-btn">Report Bug</button>
+    </div>
   </div>
 
   <div class="panel-section">
@@ -80,8 +80,10 @@
       Show Health Recommendations
     </label>
   </div>
+  {% endif %}
 </div>
-{% endif %}
+
+<!-- Main content area - shows ONE room at a time, filtered by selection -->
 <div id="main-content">
   {% include 'partials/desks.html' with rooms=rooms %}
 </div>
@@ -217,10 +219,103 @@
 
 {% block extra_js %}
 <script>
-  const USER_HEIGHT_CM = {{ user_height|default:"176" }};
+  const USER_HEIGHT_CM = Number("{{ user_height|default:'176' }}") || 176;
   const INITIAL_DESK_ID = "{{ active_desk_id|default:'' }}";
 </script>
-<script type="module" src="{% static 'script/desk.js' %}"></script>
 
+<script>
+// ✅ FIXED: Load desks filtered by BOTH room AND floor
+async function loadDesksForRoom() {
+  const selectedRoom = sessionStorage.getItem("lastDeskRoom") || "A";
+  const selectedFloor = sessionStorage.getItem("lastDeskFloor") || "Floor 1";
+  
+  try {
+    const response = await fetch(`/api/desks/`, {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    });
+    
+    if (!response.ok) {
+      console.error('[index] Failed to fetch desks:', response.status);
+      updateMainContent([], selectedFloor, selectedRoom);
+      return {};
+    }
+    
+    const allDesks = await response.json();
+    
+    // Filter desks for the selected room AND floor
+    const filteredDesks = allDesks.filter(desk => 
+      (desk.floor || 'Floor 1') === selectedFloor && 
+      (desk.room || 'A') === selectedRoom
+    );
+    
+    updateMainContent(filteredDesks, selectedFloor, selectedRoom);
+    
+    return { filteredDesks, selectedFloor, selectedRoom };
+  } catch (err) {
+    console.error('[index] Error loading desks:', err);
+    updateMainContent([], selectedFloor, selectedRoom);
+    return {};
+  }
+}
+
+// ✅ FIXED: Render desks to the DOM (only updates if content changed)
+function updateMainContent(desksData, floor, room) {
+  const mainContent = document.getElementById('main-content');
+  
+  let html = `
+    <div class="grid-container">
+      <img src="{% static 'Assets/este.jpg' %}" class="background-image" alt="Background">
+      <div class="room-wrapper" id="room-${room}">
+        <h3 style="position: relative; z-index: 10;">${floor} - Room ${room}</h3>
+        <div class="room-block">
+  `;
+  
+  if (desksData.length === 0) {
+    html += `<p style="text-align: center; color: #999; padding: 40px; grid-column: 1/-1;">No desks in this room</p>`;
+  } else {
+    desksData.forEach((desk, index) => {
+      html += `
+        <button class="btn btn${index + 1}"
+          data-desk-id="${desk.mac}"
+          data-desk-number="${index + 1}">
+          ${index + 1}
+        </button>
+      `;
+    });
+  }
+  
+  html += `
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // ✅ Only update if content actually changed
+  if (mainContent.innerHTML !== html) {
+    mainContent.innerHTML = html;
+    document.dispatchEvent(new Event("overviewLoaded"));
+  }
+}
+
+// ✅ Listen for room selection changes
+document.addEventListener('roomSelected', async (e) => {
+  console.log('[index] Room selected event received:', e.detail);
+  await loadDesksForRoom();
+});
+
+// Initial load on page load
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('[index] Page loaded, loading desks for selected room...');
+  await loadDesksForRoom();
+  document.dispatchEvent(new Event("overviewLoaded"));
+});
+
+// ✅ REMOVED: Interval-based refresh (causes blinking)
+// Auto-refresh only happens when needed via roomSelected event
+</script>
+
+<script type="module" src="{% static 'script/desk.js' %}"></script>
 <script src="{% static 'script/overview.js' %}"></script>
 {% endblock %}

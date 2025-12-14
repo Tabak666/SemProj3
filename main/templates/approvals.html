@@ -214,6 +214,133 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- Desk Management Section (Admin Only) -->
+    <div class="approvals-section" style="margin-top: 40px;" id="deskManagementSection">
+        <div class="section-header">
+            <h2>
+                <span>📋</span>
+                Desk Management
+            </h2>
+            <button type="button" class="btn-action btn-approve" onclick="showAddDeskModal()" style="margin-top: 0;">
+                <span>+</span>
+                Add New Table
+            </button>
+        </div>
+
+        <table class="users-table" id="desksManagementTable">
+            <thead>
+                <tr>
+                    <th>Table Name</th>
+                    <th>Floor</th>
+                    <th>Room</th>
+                    <th>Mac Address</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="desksTableBody">
+                <!-- Populated by JavaScript -->
+            </tbody>
+        </table>
+
+        <div class="empty-state" id="noDesksMessage" style="display: none;">
+            <h3>No Tables Available</h3>
+            <p>Click "Add New Table" to create one.</p>
+        </div>
+    </div>
+
+    <!-- Add/Edit Desk Modal -->
+    <div class="confirm-modal-overlay" id="addDeskModal">
+        <div class="confirm-modal" style="max-width: 500px;">
+            <div class="confirm-modal-header">
+                <div class="confirm-modal-icon">
+                    <i class="fas fa-plus"></i>
+                </div>
+                <h3 class="confirm-modal-title" id="deskModalTitle">Add New Table</h3>
+            </div>
+            <div class="confirm-modal-body">
+                <form id="addDeskForm">
+                    {% csrf_token %}
+                    <div style="margin-bottom: 16px;">
+                        <label for="deskName" style="display: block; margin-bottom: 6px; font-weight: 500;">
+                            Table Name <span style="color: #ff4444;">*</span>
+                        </label>
+                        <input type="text" id="deskName" name="name" placeholder="e.g., Table 1" required 
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label for="deskFloor" style="display: block; margin-bottom: 6px; font-weight: 500;">
+                            Floor <span style="color: #ff4444;">*</span>
+                        </label>
+                        <select id="deskFloor" name="floor" required 
+                                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                            <option value="">Select Floor</option>
+                            <option value="Floor 1">Floor 1</option>
+                            <option value="Floor 2">Floor 2</option>
+                            <option value="Floor 3">Floor 3</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label for="deskRoom" style="display: block; margin-bottom: 6px; font-weight: 500;">
+                            Room <span style="color: #ff4444;">*</span>
+                        </label>
+                        <select id="deskRoom" name="room" required 
+                                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                            <option value="">Select Room</option>
+                            <option value="A">Room A</option>
+                            <option value="B">Room B</option>
+                            <option value="C">Room C</option>
+                            <option value="D">Room D</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label for="deskMac" style="display: block; margin-bottom: 6px; font-weight: 500;">
+                            Mac Address
+                        </label>
+                        <input type="text" id="deskMac" name="mac" placeholder="e.g., aa:bb:cc:dd:ee:ff" 
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                    </div>
+                </form>
+            </div>
+            <div class="confirm-modal-footer">
+                <button type="button" class="confirm-btn confirm-btn-cancel" onclick="hideAddDeskModal()">
+                    Cancel
+                </button>
+                <button type="button" class="confirm-btn confirm-btn-confirm" onclick="submitAddDesk()">
+                    Add Table
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Desk Confirmation Modal -->
+    <div class="confirm-modal-overlay" id="deleteDeskModal">
+        <div class="confirm-modal">
+            <div class="confirm-modal-header">
+                <div class="confirm-modal-icon" style="color: #ff4444;">
+                    <i class="fas fa-trash"></i>
+                </div>
+                <h3 class="confirm-modal-title">Delete Table?</h3>
+            </div>
+            <div class="confirm-modal-body">
+                <p class="confirm-modal-message">
+                    Are you sure you want to delete this table? This action cannot be undone.
+                </p>
+                <div style="padding: 12px; background-color: #f5f5f5; border-radius: 4px; margin-top: 16px;">
+                    <div><strong>Name:</strong> <span id="deleteDeskName"></span></div>
+                    <div><strong>Room:</strong> <span id="deleteDeskRoom"></span></div>
+                </div>
+            </div>
+            <div class="confirm-modal-footer">
+                <button type="button" class="confirm-btn confirm-btn-cancel" onclick="hidDeleteDeskModal()">
+                    Cancel
+                </button>
+                <button type="button" class="confirm-btn confirm-btn-confirm" onclick="confirmDeleteDesk()" style="background-color: #ff4444;">
+                    Delete Table
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- User Decline -->
@@ -340,11 +467,248 @@ function hidePasswordResetDeclineModal() {
     document.body.style.overflow = '';
 }
 
+// Desk Management Functions
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+let deskToDelete = null;
+
+async function loadDesksTable() {
+    try {
+        console.log('Fetching desks from /api/desks/...');
+        const response = await fetch('/api/desks/', { 
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Failed to load desks from /api/desks/:', response.status, errorText);
+            
+            // Try fallback endpoint
+            try {
+                console.log('Trying fallback /load_view/desks/...');
+                const fallbackResponse = await fetch('/load_view/desks/', { 
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' }
+                });
+                console.log('Fallback response status:', fallbackResponse.status);
+                
+                if (fallbackResponse.ok) {
+                    const desks = await fallbackResponse.json();
+                    console.log('Fallback desks loaded:', desks);
+                    renderDesksTable(desks);
+                    return;
+                }
+            } catch (e) {
+                console.error('Fallback also failed:', e);
+            }
+            renderDesksTable([]);
+            return;
+        }
+        
+        const desks = await response.json();
+        console.log('Desks loaded successfully:', desks);
+        console.log('Number of desks:', Array.isArray(desks) ? desks.length : 'not an array');
+        renderDesksTable(Array.isArray(desks) ? desks : []);
+    } catch (err) {
+        console.error('Error loading desks:', err);
+        renderDesksTable([]);
+    }
+}
+
+function renderDesksTable(desks) {
+    const tbody = document.getElementById('desksTableBody');
+    const noMessage = document.getElementById('noDesksMessage');
+    
+    tbody.innerHTML = '';
+    
+    if (!desks || desks.length === 0) {
+        noMessage.style.display = 'block';
+        document.getElementById('desksManagementTable').style.display = 'none';
+        return;
+    }
+    
+    noMessage.style.display = 'none';
+    document.getElementById('desksManagementTable').style.display = 'table';
+    
+    desks.forEach(desk => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${desk.name || 'N/A'}</td>
+            <td>${desk.floor || 'N/A'}</td>
+            <td>${desk.room || 'N/A'}</td>
+            <td><code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">${desk.mac || 'N/A'}</code></td>
+            <td>
+                <div class="action-buttons">
+                    <button type="button" class="btn-action btn-decline" 
+                            onclick="showDeleteDeskModal(${desk.id}, '${desk.name}', '${desk.floor || 'N/A'} - ${desk.room || 'N/A'}')">
+                        <span>🗑</span>
+                        Delete
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function showAddDeskModal() {
+    const modal = document.getElementById('addDeskModal');
+    document.getElementById('addDeskForm').reset();
+    document.getElementById('deskModalTitle').textContent = 'Add New Table';
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function hideAddDeskModal() {
+    const modal = document.getElementById('addDeskModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+async function submitAddDesk() {
+    const name = document.getElementById('deskName').value.trim();
+    const floor = document.getElementById('deskFloor').value.trim();
+    const room = document.getElementById('deskRoom').value.trim();
+    const mac = document.getElementById('deskMac').value.trim();
+    
+    if (!name) {
+        alert('Table name is required');
+        return;
+    }
+    
+    if (!floor) {
+        alert('Floor is required');
+        return;
+    }
+    
+    if (!room) {
+        alert('Room is required');
+        return;
+    }
+    
+    try {
+        const payload = { name, floor, room };
+        if (mac) payload.mac = mac;
+        
+        console.log('Submitting desk:', payload);
+        
+        const response = await fetch('/api/desks/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+        });
+        
+        console.log('Response status:', response.status);
+        const responseText = await response.text();
+        console.log('Response body:', responseText);
+        
+        if (!response.ok) {
+            try {
+                const errorData = JSON.parse(responseText);
+                console.error('Server error:', errorData);
+                alert('Failed to add table: ' + (errorData.detail || errorData.error || 'Unknown error'));
+            } catch {
+                alert('Failed to add table (Status: ' + response.status + ')');
+            }
+            return;
+        }
+        
+        hideAddDeskModal();
+        await loadDesksTable();
+        alert('Table added successfully!');
+    } catch (err) {
+        console.error('Error adding desk:', err);
+        alert('An error occurred while adding the table: ' + err.message);
+    }
+}
+
+function showDeleteDeskModal(deskId, deskName, deskRoom) {
+    deskToDelete = deskId;
+    document.getElementById('deleteDeskName').textContent = deskName;
+    document.getElementById('deleteDeskRoom').textContent = deskRoom;
+    const modal = document.getElementById('deleteDeskModal');
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function hidDeleteDeskModal() {
+    const modal = document.getElementById('deleteDeskModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    deskToDelete = null;
+}
+
+async function confirmDeleteDesk() {
+    if (!deskToDelete) return;
+    
+    try {
+        console.log('Deleting desk with ID:', deskToDelete);
+        console.log('CSRF token:', getCookie('csrftoken'));
+        console.log('User authenticated:', document.body.innerText.includes('logout')); // rough check
+        
+        const response = await fetch(`/api/desks/${deskToDelete}/`, {
+            method: 'DELETE',
+            headers: { 
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({})
+        });
+        
+        console.log('Delete response status:', response.status);
+        const responseText = await response.text();
+        console.log('Delete response body:', responseText);
+        
+        if (!response.ok) {
+            try {
+                const errorData = JSON.parse(responseText);
+                alert('Failed to delete table: ' + (errorData.detail || errorData.error || 'Unknown error'));
+            } catch {
+                alert('Failed to delete table (Status: ' + response.status + ')');
+            }
+            return;
+        }
+        
+        hidDeleteDeskModal();
+        await loadDesksTable();
+        alert('Table deleted successfully!');
+    } catch (err) {
+        console.error('Error deleting desk:', err);
+        alert('An error occurred while deleting the table: ' + err.message);
+    }
+}
+
 // Close Escape key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         hideUserDeclineModal();
         hidePasswordResetDeclineModal();
+        hideAddDeskModal();
+        hidDeleteDeskModal();
     }
 });
 
@@ -361,11 +725,21 @@ document.getElementById('passwordResetDeclineModal').addEventListener('click', f
     }
 });
 
+document.getElementById('addDeskModal').addEventListener('click', function(e) {
+    if (e.target === this) hideAddDeskModal();
+});
+
+document.getElementById('deleteDeskModal').addEventListener('click', function(e) {
+    if (e.target === this) hidDeleteDeskModal();
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     const stats = document.querySelectorAll('.stat-card');
     stats.forEach((stat, index) => {
         stat.style.animationDelay = `${0.1 * index}s`;
     });
+    console.log('Loading desks table on page load...');
+    loadDesksTable();
 });
 </script>
 {% endblock %}

@@ -16,8 +16,15 @@ function initOverview() {
       const roomLabel = button.dataset.label; // e.g. "Room C"
       const roomId = roomLabel.replace("Room ", ""); // "C"
       
-      // ✅ FIX: Save room immediately so desk.js finds it
+      // ✅ Get the selected floor from the dropdown
+      const floorSelect = document.getElementById("floorSelect");
+      const selectedFloor = floorSelect ? floorSelect.options[floorSelect.selectedIndex].text : "Floor 1";
+      
+      // ✅ Save both room AND floor to sessionStorage
       sessionStorage.setItem("lastDeskRoom", roomId);
+      sessionStorage.setItem("lastDeskFloor", selectedFloor);
+
+      console.log(`[overview] Selected: ${selectedFloor} - Room ${roomId}`);
 
       // Force sidebar to update visually
       document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
@@ -58,20 +65,14 @@ function initOverview() {
       });
 
       setTimeout(() => {
-        fetch(`/load_view/desks/?room=${roomLabel}`)
-          .then(res => res.text())
-          .then(html => {
-            const mainContent = document.getElementById("main-content");
-            if (!mainContent) return;
-            mainContent.innerHTML = html;
+        // ✅ Dispatch custom event so index.html knows room was selected
+        document.dispatchEvent(new CustomEvent('roomSelected', { 
+          detail: { room: roomId, floor: selectedFloor } 
+        }));
 
-            document.dispatchEvent(new Event("overviewLoaded"));
-
-            fadeOverlay.classList.remove("fade-in");
-            setTimeout(() => fadeOverlay.remove(), 500);
-            overlay.remove();
-          })
-          .catch(err => console.error("❌ Error loading desks view:", err));
+        fadeOverlay.classList.remove("fade-in");
+        setTimeout(() => fadeOverlay.remove(), 500);
+        overlay.remove();
       }, 800);
     });
   });
@@ -85,6 +86,8 @@ document.addEventListener("DOMContentLoaded", () => {
     floorSelect.addEventListener("change", () => {
       const floorValue = floorSelect.options[floorSelect.selectedIndex].text;
       corridorLabel.textContent = `${floorValue} – LINAK Corridor`;
+      // ✅ Save floor when changed
+      sessionStorage.setItem("lastDeskFloor", floorValue);
     });
   }
 });

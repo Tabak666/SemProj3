@@ -10,6 +10,7 @@ from django.core.cache import cache
 from .forms import RegistrationForm, LoginForm, ForgotPasswordForm
 from django.views.decorators.http import require_GET, require_POST
 from django.utils import timezone
+from tableAPI.desk_store import load_desks  # ✅ Add this import
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_datetime
 
@@ -283,34 +284,41 @@ def dashboard_view(request):
     })
 
 def load_view(request, view_name):
-    desks_api = cache.get("latest_desk_data") or []
-    room_filter = request.GET.get("room")
+    # ✅ Load desks directly from JSON file, not from cache
+    desks_api = load_desks()  # This returns a list of dictionaries
+    room_filter = request.GET.get("room")  # e.g. "Room A"
+    
+    # Extract room letter from "Room A" format
+    room_letter = None
+    if room_filter:
+        room_letter = room_filter.replace("Room ", "").strip()  # Extract "A" from "Room A"
+        print(f"[load_view] Filtering desks for room: {room_letter}")
+    
     room_names = ["A", "B", "C", "D"]
     desks_per_room = 12
     rooms = {name: [] for name in room_names}
-    desk_iter = iter(desks_api)
-    desk_number = 1
-    for room_name in room_names:
-        for i in range(desks_per_room):
-            try:
-                desk = next(desk_iter)
-            except StopIteration:
-                desk = None
-            rooms[room_name].append({
+    
+    # Build rooms dictionary with desks filtered by room
+    for desk in desks_api:
+        desk_room = desk.get("room", "A")  # Default to "A" if no room specified
+        if desk_room in rooms:
+            rooms[desk_room].append({
                 "desk": desk,
-                "number": desk_number if desk else ""
+                "number": len(rooms[desk_room]) + 1
             })
-            if desk:
-                desk_number += 1
-    filtered_rooms = rooms
-    if room_filter:
-        room_key = room_filter.split()[-1]
-        if room_key in rooms:
-            filtered_rooms = {room_key: rooms[room_key]}
+    
+    # If a specific room is requested, only show that room
+    if room_letter and room_letter in rooms:
+        filtered_rooms = {room_letter: rooms[room_letter]}
+        print(f"[load_view] Returning only room {room_letter} with {len(rooms[room_letter])} desks")
+    else:
+        filtered_rooms = rooms
+    
     context = {
         "rooms": filtered_rooms,
-        "highlight": room_filter
+        "highlight": room_filter or "Room A"
     }
+    
     if view_name == "desks":
         return render(request, "partials/desks.html", context)
     elif view_name == "overview":

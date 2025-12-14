@@ -5,10 +5,9 @@
 
     {% for room, desks in rooms.items %}
     <div class="room-wrapper" id="room-{{ room }}">
-        <h3>Room {{ room }}</h3>
+        <h3 style="position: relative; z-index: 10;">Room {{ room }}</h3>
         <div class="room-block">
             {% for entry in desks %}
-
                 {% if entry.is_broken %}
                     <button class="btn btn{{ forloop.counter }} broken"
                             data-desk-id=""
@@ -18,17 +17,9 @@
                     </button>
 
                 {% elif entry.desk %}
-                    <button class="btn btn{{ forloop.counter }} normal"
+                    <button class="btn btn{{ forloop.counter }} normal{% if entry.is_booked %} booked{% endif %}"
                             data-desk-id="{{ entry.desk.mac_address }}"
                             data-desk-number="{{ entry.number }}">
-                        {{ entry.number }}
-                    </button>
-
-                {% elif entry.desk %}
-                    <button class="btn btn{{ forloop.counter }} normal
-                        {% if entry.is_booked %} booked{% endif %}"
-                        data-desk-id="{{ entry.desk.mac_address }}"
-                        data-desk-number="{{ entry.number }}">
                         {{ entry.number }}
                     </button>
 
