@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('main', '0004_delete_desklayout_delete_room'),
+        ('main', '0005_bugreport'),
     ]
 
     operations = [
