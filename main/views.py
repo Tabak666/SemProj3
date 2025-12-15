@@ -13,6 +13,8 @@ from django.utils import timezone
 from tableAPI.desk_store import load_desks  # ✅ Add this import
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_datetime
+from datetime import timedelta
+import time
 
 @require_POST
 def submit_bug(request):
@@ -434,7 +436,7 @@ def user_desk_status(request, desk_id):
             # Fetch real-time data to check height AND movement status
             desk = get_desk_by_id(desk_id)
             if desk:
-                current_height = int(desk.state.position_mm / 10)
+                current_height = int(desk.state.position_mm)
                 is_moving = desk.state.speed_mms != 0 # Check if speed is not 0
         except Exception:
             pass
@@ -472,7 +474,323 @@ def set_desk_height(request):
         return JsonResponse({"success": True, "message": f"Height set to {height}cm"})
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+
+@require_POST
+def reset_daily_metrics(request):
+    """Reset all today's metrics for the user."""
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({"success": False, "message": "Not logged in"}, status=401)
     
+    try:
+        user = Users.objects.get(id=user_id)
+        now = timezone.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Delete all pairings from today
+        UserTablePairs.objects.filter(
+            user_id=user,
+            start_time__gte=today_start
+        ).delete()
+        
+        # Delete all bookings from today
+        DeskBooking.objects.filter(
+            user=user,
+            start_time__gte=today_start
+        ).delete()
+        
+        return JsonResponse({
+            "success": True,
+            "message": "Today's metrics have been reset"
+        })
+    except Users.DoesNotExist:
+        return JsonResponse({"success": False, "message": "User not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+@require_GET
+def health_metrics_api(request):
+    """
+    Calculate health metrics based on paired desks (UserTablePairs) and booked desks (DeskBooking).
+    Detects REAL position changes by tracking desk height over time.
+    Every real second = 1 minute for demo/testing.
+    Sitting: < 850mm, Standing: >= 850mm
+    """
+    # Demo time scaling
+    REAL_SECONDS_TO_DEMO_MINUTES = 15 / 60  # 1s real = 15s demo
+
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({"success": False, "message": "Not logged in"}, status=401)
+    
+    try:
+        user = Users.objects.get(id=user_id)
+        now = timezone.now()
+        
+        # Position threshold
+        SITTING_THRESHOLD = 850  # mm - < 850 = sitting, >= 850 = standing
+        
+        sitting_seconds = 0
+        standing_seconds = 0
+        position_changes = 0
+        last_change_time = None
+        
+        # ============================================
+        # PART 1: Process UserTablePairs (Pair Now)
+        # ============================================
+        # Include both active (end_time is NULL) and completed pairings from today
+        from django.db.models import Q
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        paired_desks = UserTablePairs.objects.filter(
+            user_id_id=user_id
+        ).filter(
+            Q(end_time__isnull=True) | Q(start_time__gte=today_start)
+        )
+        
+        for pair in paired_desks:
+            # Check if this is an active pairing or a completed one
+            is_active = pair.end_time is None
+            
+            # Calculate elapsed time
+            if is_active:
+                # Active pairing: measure from start to now
+                elapsed_seconds = (now - pair.start_time).total_seconds()
+                reference_time = now
+            else:
+                # Completed pairing: measure from start to end
+                elapsed_seconds = (pair.end_time - pair.start_time).total_seconds()
+                reference_time = pair.end_time
+            
+            # Only fetch and record desk height for ACTIVE pairings
+            if is_active:
+                # Get current desk height from desk_data
+                desk_data = get_desk_data(pair.desk_id)
+                # Extract position_mm from state, convert to mm if needed
+                position_mm = desk_data.get('state', {}).get('position_mm', 750)
+                # position_mm might be in tenths of mm (e.g., 6800 = 680mm), so divide by 10 if too large
+                current_height = int(position_mm)
+                
+                # Record this height sample with timestamp
+                if not pair.height_history:
+                    pair.height_history = []
+                
+                # Always record height periodically (baseline required for analytics)
+                if not pair.height_history:
+                    pair.height_history = []
+
+                last_sample_time = pair.height_history[-1]["time_seconds"] if pair.height_history else None
+
+                # Record a sample at least every 1 second (demo = 1 min)
+                if last_sample_time is None or (elapsed_seconds - last_sample_time) >= 1:
+                    pair.height_history.append({
+                        "time_seconds": elapsed_seconds,
+                        "height_mm": current_height
+                    })
+                    pair.save()
+
+            
+            # Analyze height_history for position transitions
+            sitting, standing, changes, last_change = analyze_height_history(
+                pair.height_history, elapsed_seconds, pair.start_time, SITTING_THRESHOLD
+            )
+            sitting_seconds += sitting
+            standing_seconds += standing
+            position_changes += changes
+            if last_change and (last_change_time is None or last_change > last_change_time):
+                last_change_time = last_change
+        
+        # ============================================
+        # PART 2: Process DeskBooking (Book for Later)
+        # ============================================
+        # Only include bookings that are ongoing or happening today
+        booked_desks = DeskBooking.objects.filter(
+            user=user,
+            start_time__lte=now,
+            end_time__gte=now
+        )
+        
+        for booking in booked_desks:
+            # Time elapsed since booking started (or from midnight if booking started before today)
+            elapsed_seconds = (now - booking.start_time).total_seconds()
+            
+            # Get current desk height from desk_data
+            desk_data = get_desk_data(booking.desk_id)
+            # Extract position_mm from state, convert to mm if needed
+            position_mm = desk_data.get('state', {}).get('position_mm', 750)
+            # position_mm might be in tenths of mm (e.g., 6800 = 680mm), so divide by 10 if too large
+            current_height = int(position_mm)
+
+            
+            # Record this height sample with timestamp
+            if not booking.height_history:
+                booking.height_history = []
+            
+            # Always record height periodically (baseline required for analytics)
+            if not booking.height_history:
+                booking.height_history = []
+
+            last_sample_time = booking.height_history[-1]["time_seconds"] if booking.height_history else None
+
+            if last_sample_time is None or (elapsed_seconds - last_sample_time) >= 1:
+                booking.height_history.append({
+                    "time_seconds": elapsed_seconds,
+                    "height_mm": current_height
+                })
+                booking.save()
+
+            
+            # Analyze height_history for position transitions
+            sitting, standing, changes, last_change = analyze_height_history(
+                booking.height_history, elapsed_seconds, booking.start_time, SITTING_THRESHOLD
+            )
+            sitting_seconds += sitting
+            standing_seconds += standing
+            position_changes += changes
+            if last_change and (last_change_time is None or last_change > last_change_time):
+                last_change_time = last_change
+        
+        # ============================================
+        # Return results
+        # ============================================
+        if not paired_desks.exists() and not booked_desks.exists():
+            return JsonResponse({
+                "success": True,
+                "sitting_time_minutes": 0,
+                "standing_time_minutes": 0,
+                "sitting_time_formatted": "0h / 0m",
+                "standing_time_formatted": "0h / 0m",
+                "sitting_percentage": 0,
+                "standing_percentage": 0,
+                "position_changes": 0,
+                "last_change_minutes_ago": None,
+                "health_score": 0,
+                "total_work_minutes": 0,
+                "changes_per_hour": 0
+            })
+        
+        # Convert to minutes
+        sitting_minutes = sitting_seconds * REAL_SECONDS_TO_DEMO_MINUTES
+        standing_minutes = standing_seconds * REAL_SECONDS_TO_DEMO_MINUTES
+        total_work_minutes = sitting_minutes + standing_minutes
+        
+        if total_work_minutes > 0:
+            sitting_percentage = int((sitting_minutes / total_work_minutes) * 100)
+            standing_percentage = int((standing_minutes / total_work_minutes) * 100)
+        else:
+            sitting_percentage = 0
+            standing_percentage = 0
+        
+        # Calculate health score
+        target_sitting = 60
+        target_standing = 40
+        sitting_diff = abs(sitting_percentage - target_sitting)
+        standing_diff = abs(standing_percentage - target_standing)
+        balance_score = 100 - ((sitting_diff + standing_diff) / 2)
+        
+        changes_per_hour = (position_changes / (total_work_minutes / 60)) if total_work_minutes > 0 else 0
+        ideal_changes_per_hour = 2
+        activity_score = min(100, (changes_per_hour / ideal_changes_per_hour) * 100)
+        
+        health_score = int((balance_score * 0.6) + (activity_score * 0.4))
+        health_score = max(0, min(100, health_score))
+        
+        # Calculate last change time
+        last_change_minutes = None
+        if last_change_time:
+            last_change_minutes = int((now - last_change_time).total_seconds() / 60)
+        
+        # Format as hours/minutes
+        sitting_hours_int = int(sitting_minutes // 60)
+        sitting_mins_remainder = int(sitting_minutes % 60)
+        standing_hours_int = int(standing_minutes // 60)
+        standing_mins_remainder = int(standing_minutes % 60)
+        
+        return JsonResponse({
+            "success": True,
+            "sitting_time_minutes": int(sitting_minutes),
+            "standing_time_minutes": int(standing_minutes),
+            "sitting_time_formatted": f"{sitting_hours_int}h / {sitting_mins_remainder}m",
+            "standing_time_formatted": f"{standing_hours_int}h / {standing_mins_remainder}m",
+            "sitting_percentage": sitting_percentage,
+            "standing_percentage": standing_percentage,
+            "position_changes": position_changes,
+            "last_change_minutes_ago": last_change_minutes,
+            "health_score": health_score,
+            "total_work_minutes": int(total_work_minutes),
+            "changes_per_hour": round(changes_per_hour, 2)
+        })
+    
+    except Users.DoesNotExist:
+        return JsonResponse({"success": False, "message": "User not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+
+def analyze_height_history(height_history, elapsed_seconds, start_time, sitting_threshold):
+    """
+    Helper function to analyze height history and calculate sitting/standing time and position changes.
+    Returns: (sitting_seconds, standing_seconds, position_changes, last_change_time)
+    """
+    sitting_seconds = 0
+    standing_seconds = 0
+    position_changes = 0
+    last_change_time = None
+    
+    if not height_history or len(height_history) < 1:
+        return sitting_seconds, standing_seconds, position_changes, last_change_time
+    
+    if len(height_history) < 2:
+        # Only one sample, assume that position for all time
+        height = height_history[0].get('height_mm', 750)
+        if height < sitting_threshold:
+            sitting_seconds = elapsed_seconds
+        else:
+            standing_seconds = elapsed_seconds
+        return sitting_seconds, standing_seconds, position_changes, last_change_time
+    
+    # Sort history by time
+    history_sorted = sorted(height_history, key=lambda x: x.get('time_seconds', 0))
+    
+    # Build position segments
+    position_segments = []
+    first_height = history_sorted[0].get('height_mm', 750)
+    first_position = "sitting" if first_height < sitting_threshold else "standing"
+    position_segments.append((0, first_position))
+    
+    # Detect position changes
+    current_position = first_position
+    for i in range(1, len(history_sorted)):
+        height = history_sorted[i].get('height_mm', 750)
+        new_position = "sitting" if height < sitting_threshold else "standing"
+        
+        if new_position != current_position:
+            time_of_change = history_sorted[i].get('time_seconds', 0)
+            position_segments.append((time_of_change, new_position))
+            position_changes += 1
+            last_change_time = start_time + timedelta(seconds=time_of_change)
+            current_position = new_position
+    
+    # Calculate time in each position
+    for i in range(len(position_segments)):
+        seg_start_seconds = position_segments[i][0]
+        seg_position = position_segments[i][1]
+        
+        if i + 1 < len(position_segments):
+            seg_end_seconds = position_segments[i + 1][0]
+        else:
+            seg_end_seconds = elapsed_seconds
+        
+        seg_duration_demo_minutes = seg_end_seconds - seg_start_seconds
+        
+        if seg_position == "sitting":
+            sitting_seconds += seg_duration_demo_minutes
+        else:
+            standing_seconds += seg_duration_demo_minutes
+    
+    return sitting_seconds, standing_seconds, position_changes, last_change_time
+
 
 @csrf_exempt
 @require_POST

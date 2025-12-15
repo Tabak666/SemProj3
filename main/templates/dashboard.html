@@ -13,6 +13,7 @@
         <h1>Health Dashboard</h1>
         <div class="user-info">
             <strong>Desk:</strong> DESK 4486 | <strong>Today:</strong> <span id="current-date"></span>
+            <button id="resetMetricsBtn" style="margin-left: 20px; padding: 5px 12px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Reset Today's Stats</button>
         </div>
     </div>
 
@@ -22,7 +23,7 @@
             <div class="metric-icon" style="float: right; font-size: 24px;"></div>
             <div class="metric-label">Sitting Time Today</div>
             <div class="metric-value" id="metricSitting">4.2h</div>
-            <div class="metric-subtitle">67% of work time</div>
+            <div class="metric-subtitle" id="sittingSubtitle">67% of work time</div>
             <div class="progress-bar">
                 <div class="progress-fill" id="progressSitting" style="width: 67%;"></div>
             </div>
@@ -33,7 +34,7 @@
             <div class="metric-icon" style="float: right; font-size: 24px;"></div>
             <div class="metric-label">Standing Time Today</div>
             <div class="metric-value" id="metricStanding" style="color: #28a745;">2.1h</div>
-            <div class="metric-subtitle">33% of work time</div>
+            <div class="metric-subtitle" id="standingSubtitle">33% of work time</div>
             <div class="progress-bar">
                 <div class="progress-fill" id="progressStanding" style="width: 33%; background: linear-gradient(90deg, #28a745, #5cb85c);"></div>
             </div>
@@ -53,7 +54,12 @@
 
         <div class="metric-card interactive-card" data-metric="health">
             <div class="metric-icon" style="float: right; font-size: 24px;"></div>
-            <div class="metric-label">Health Score</div>
+            <div style="position: relative;">
+                <div class="metric-label">
+                    Health Score
+                    <span class="info-btn" title="Based on 60% posture balance (60% sitting/40% standing) + 40% activity (2+ changes/hour)">ⓘ</span>
+                </div>
+            </div>
             <div class="metric-value" id="metricHealth" style="color: #ffa500;">72/100</div>
             <div class="metric-subtitle">Good balance</div>
             <span class="status-badge status-good">On Track</span>
@@ -101,28 +107,23 @@
         <div class="col-md-6">
             <div class="chart-container">
                 <div class="chart-header">
-                    <h3 class="chart-title">Weekly Sitting vs Standing</h3>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <button class="chart-control-btn active" data-view="week">Week</button>
-                        <button class="chart-control-btn" data-view="month">Month</button>
-                        <button class="chart-control-btn" id="resetZoom" style="display: none;">Reset Zoom</button>
-                    </div>
+                    <h3 class="chart-title">Today's Hourly Breakdown</h3>
                 </div>
                 <div class="chart-wrapper">
                     <canvas id="weeklyChart"></canvas>
                 </div>
                 <div style="margin-top: 15px; padding: 12px; background: #f8f9fa; border-radius: 6px; display: flex; justify-content: space-around; text-align: center;">
                     <div>
-                        <div style="font-size: 11px; color: #666;">Weekly Avg Sitting</div>
-                        <div style="font-size: 18px; font-weight: bold; color: #327AD9;" id="weeklyAvgSit">4.5h</div>
+                        <div style="font-size: 11px; color: #666;">Today Sitting</div>
+                        <div style="font-size: 18px; font-weight: bold; color: #327AD9;" id="todaySit">--</div>
                     </div>
                     <div>
-                        <div style="font-size: 11px; color: #666;">Weekly Avg Standing</div>
-                        <div style="font-size: 18px; font-weight: bold; color: #28a745;" id="weeklyAvgStand">2.3h</div>
+                        <div style="font-size: 11px; color: #666;">Today Standing</div>
+                        <div style="font-size: 18px; font-weight: bold; color: #28a745;" id="todayStand">--</div>
                     </div>
                     <div>
-                        <div style="font-size: 11px; color: #666;">Best Day</div>
-                        <div style="font-size: 18px; font-weight: bold; color: #ffa500;" id="bestDay">Wed</div>
+                        <div style="font-size: 11px; color: #666;">Active Hours</div>
+                        <div style="font-size: 18px; font-weight: bold; color: #ffa500;" id="activeHours">--</div>
                     </div>
                 </div>
             </div>
@@ -135,72 +136,23 @@
             <div class="recommendations">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h3 style="margin: 0;">💡 Health Recommendations</h3>
-                    <button id="refreshRecommendations" style="padding: 6px 12px; border: 1px solid #327AD9; background: white; color: #327AD9; border-radius: 5px; cursor: pointer; font-size: 12px; transition: all 0.2s;">
+                    <button id="refreshRecommendations" onclick="loadHealthMetrics()" style="padding: 6px 12px; border: 1px solid #327AD9; background: white; color: #327AD9; border-radius: 5px; cursor: pointer; font-size: 12px; transition: all 0.2s;">
                         🔄 Refresh
                     </button>
                 </div>
-                <div class="recommendation-item" data-priority="high">
-                    <input type="checkbox" id="rec1" style="margin-right: 10px; cursor: pointer;">
-                    <span class="recommendation-icon" style="background: #ff6b6b;">1</span>
-                    <label for="rec1" style="cursor: pointer; flex: 1;">
-                        <strong>Consider standing more:</strong> You've been sitting for 4.2 hours today. Try to increase standing time to 40%.
-                    </label>
-                    <span class="priority-badge" style="background: #ff6b6b; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">HIGH</span>
-                </div>
-                <div class="recommendation-item" data-priority="medium">
-                    <input type="checkbox" id="rec3" style="margin-right: 10px; cursor: pointer;">
-                    <span class="recommendation-icon" style="background: #ffa500;">3</span>
-                    <label for="rec3" style="cursor: pointer; flex: 1;">
-                        <strong>Next break suggestion:</strong> Consider standing for the next 30 minutes to improve circulation.
-                    </label>
-                    <span class="priority-badge" style="background: #ffa500; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">MEDIUM</span>
-                </div>
-                <div class="recommendation-item" data-priority="low">
-                    <input type="checkbox" id="rec4" style="margin-right: 10px; cursor: pointer;">
-                    <span class="recommendation-icon" style="background: #327AD9;">4</span>
-                    <label for="rec4" style="cursor: pointer; flex: 1;">
-                        <strong>Optimal desk height:</strong> Your current setting of 680mm is ideal for your height (175cm).
-                    </label>
-                    <span class="priority-badge" style="background: #327AD9; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">INFO</span>
+                <div id="recommendationsContainer">
+                    <!-- Recommendations will be generated here by JavaScript -->
                 </div>
                 <div style="margin-top: 15px; padding: 10px; background: white; border-radius: 6px; text-align: center;">
                     <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Completed Today</div>
                     <div style="font-size: 20px; font-weight: bold; color: #327AD9;">
-                        <span id="completedCount">0</span> / 4
+                        <span id="completedCount">0</span> / <span id="totalRecommendations">4</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Weekly Summary -->
-    <div class="chart-container">
-        <div class="chart-header">
-            <h3 class="chart-title">This Week's Summary</h3>
-        </div>
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-label">Average Daily Sitting</div>
-                <div class="metric-value">4.5h</div>
-                <span class="status-badge status-warning">Improve</span>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Average Daily Standing</div>
-                <div class="metric-value">2.3h</div>
-                <span class="status-badge status-good">Good</span>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Total Position Changes</div>
-                <div class="metric-value">78</div>
-                <span class="status-badge status-good">Active</span>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Weekly Health Score</div>
-                <div class="metric-value">75/100</div>
-                <span class="status-badge status-good">Improving</span>
-            </div>
-        </div>
-    </div>
 </div>
 {% endblock %}
 
@@ -288,11 +240,13 @@
                             const label = context.label || '';
                             const value = context.parsed;
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const hours = (value / 100 * 6.3).toFixed(1);
+                            // Calculate total hours from API data (will be set dynamically)
+                            const totalHours = window.dashboardTotalHours || 6.3;
+                            const hours = (value / 100 * totalHours).toFixed(1);
                             return [
                                 label + ': ' + value + '%',
                                 'Time: ' + hours + ' hours',
-                                'of 6.3 hours total'
+                                'of ' + totalHours.toFixed(1) + ' hours total'
                             ];
                         }
                     }
@@ -316,7 +270,7 @@
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = '#327AD9';
                 
-                const mainText = '6.3h';
+                const mainText = (window.dashboardTotalHours || 6.3).toFixed(1) + 'h';
                 const textX = Math.round((width - ctx.measureText(mainText).width) / 2);
                 const textY = height / 2 - 10;
                 
@@ -356,20 +310,57 @@
         });
     });
     
-    // Weekly Chart - Last 7 days
+    // Hourly Chart - Today's breakdown
     const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
     
-    const weekData = {
-        week: {
-            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-            sitting: [5.2, 4.8, 4.5, 4.9, 4.2, 3.1, 2.8],
-            standing: [1.8, 2.2, 2.5, 2.1, 2.8, 1.9, 1.5]
-        },
-        month: {
-            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-            sitting: [4.9, 4.7, 4.5, 4.3],
-            standing: [2.1, 2.3, 2.5, 2.7]
+    function generateHourlyData(data) {
+        // Generate 24-hour labels
+        const labels = [];
+        for (let i = 0; i < 24; i++) {
+            labels.push(i.toString().padStart(2, '0') + ':00');
         }
+        
+        // Calculate hourly sitting and standing from height_history if available
+        const sittingData = new Array(24).fill(0);
+        const standingData = new Array(24).fill(0);
+        
+        // If we have hourly breakdown data, use it; otherwise distribute the daily totals
+        if (data && data.hourly_breakdown) {
+            // Use provided hourly data
+            for (let i = 0; i < 24; i++) {
+                sittingData[i] = data.hourly_breakdown.sitting[i] || 0;
+                standingData[i] = data.hourly_breakdown.standing[i] || 0;
+            }
+        } else if (data) {
+            // Estimate hourly distribution based on position changes and work time
+            const totalMinutes = data.total_work_minutes || 0;
+            const sitPercent = data.sitting_percentage || 0;
+            const standPercent = data.standing_percentage || 0;
+            
+            if (totalMinutes > 0) {
+                const totalSitMinutes = (totalMinutes * sitPercent) / 100;
+                const totalStandMinutes = (totalMinutes * standPercent) / 100;
+                
+                // Distribute evenly across active hours (6:00 to 18:00)
+                const activeHours = 12;
+                const avgSitPerHour = totalSitMinutes / activeHours / 60;
+                const avgStandPerHour = totalStandMinutes / activeHours / 60;
+                
+                for (let i = 6; i < 18; i++) {
+                    sittingData[i] = parseFloat(avgSitPerHour.toFixed(2));
+                    standingData[i] = parseFloat(avgStandPerHour.toFixed(2));
+                }
+            }
+        }
+        
+        return { labels, sitting: sittingData, standing: standingData };
+    }
+    
+    let hourlyData = generateHourlyData(null);
+    
+    const weekData = {
+        week: hourlyData,
+        month: hourlyData
     };
     
     const weeklyChart = new Chart(weeklyCtx, {
@@ -380,32 +371,34 @@
                 label: 'Sitting Hours',
                 data: weekData.week.sitting,
                 borderColor: '#327AD9',
-                backgroundColor: 'rgba(50, 122, 217, 0.1)',
+                backgroundColor: 'rgba(50, 122, 217, 0.05)',
                 fill: true,
-                tension: 0.4,
-                pointRadius: 6,
-                pointHoverRadius: 8,
+                tension: 0.3,
+                pointRadius: 5,
+                pointHoverRadius: 7,
                 pointBackgroundColor: '#327AD9',
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2,
                 pointHoverBackgroundColor: '#fff',
                 pointHoverBorderColor: '#327AD9',
-                pointHoverBorderWidth: 3
+                pointHoverBorderWidth: 2,
+                borderWidth: 3
             }, {
                 label: 'Standing Hours',
                 data: weekData.week.standing,
                 borderColor: '#28a745',
-                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                backgroundColor: 'rgba(40, 167, 69, 0.05)',
                 fill: true,
-                tension: 0.4,
-                pointRadius: 6,
-                pointHoverRadius: 8,
+                tension: 0.3,
+                pointRadius: 5,
+                pointHoverRadius: 7,
                 pointBackgroundColor: '#28a745',
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2,
                 pointHoverBackgroundColor: '#fff',
                 pointHoverBorderColor: '#28a745',
-                pointHoverBorderWidth: 3
+                pointHoverBorderWidth: 2,
+                borderWidth: 3
             }]
         },
         options: {
@@ -418,7 +411,7 @@
             scales: {
                 y: {
                     beginAtZero: true,
-                    max: 8,
+                    max: 2,
                     ticks: {
                         callback: function(value) {
                             return value + 'h';
@@ -459,9 +452,8 @@
                         size: 13
                     },
                     callbacks: {
-                        afterLabel: function(context) {
-                            const total = context.dataset.data[context.dataIndex];
-                            return 'Total: ' + (total * 60).toFixed(0) + ' minutes';
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + 'h (' + Math.round(context.parsed.y * 60) + ' min)';
                         }
                     }
                 },
@@ -484,19 +476,23 @@
         }
     });
 
-    // Chart view switcher
-    document.querySelectorAll('.chart-control-btn[data-view]').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.chart-control-btn[data-view]').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            const view = this.dataset.view;
-            weeklyChart.data.labels = weekData[view].labels;
-            weeklyChart.data.datasets[0].data = weekData[view].sitting;
-            weeklyChart.data.datasets[1].data = weekData[view].standing;
-            weeklyChart.update('active');
-        });
-    });
+    // Update hourly chart with actual data
+    function updateHourlyChart(data) {
+        const newHourlyData = generateHourlyData(data);
+        weeklyChart.data.labels = newHourlyData.labels;
+        weeklyChart.data.datasets[0].data = newHourlyData.sitting;
+        weeklyChart.data.datasets[1].data = newHourlyData.standing;
+        weeklyChart.update('active');
+        
+        // Update stats
+        const totalSit = newHourlyData.sitting.reduce((a, b) => a + b, 0);
+        const totalStand = newHourlyData.standing.reduce((a, b) => a + b, 0);
+        const activeHours = newHourlyData.sitting.filter(h => h > 0).length;
+        
+        document.getElementById('todaySit').textContent = totalSit.toFixed(1) + 'h';
+        document.getElementById('todayStand').textContent = totalStand.toFixed(1) + 'h';
+        document.getElementById('activeHours').textContent = activeHours + 'h';
+    }
 
     // Recommendation checkboxes
     let completedCount = 0;
@@ -513,6 +509,320 @@
             document.getElementById('completedCount').textContent = completedCount;
            
         });
+    });
+
+    // ===== LOAD HEALTH METRICS FROM BACKEND =====
+    async function loadHealthMetrics() {
+        // Check if we need to clear recommendations for a new day
+        checkAndClearDailyRecommendations();
+        
+        try {
+            const response = await fetch('/api/health_metrics/', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (!response.ok) {
+                console.warn('Failed to load health metrics:', response.status);
+                return;
+            }
+
+            const data = await response.json();
+            
+            if (!data.success) {
+                console.warn('No booking data available for today');
+                return;
+            }
+
+            // Update sitting time
+            document.getElementById('metricSitting').textContent = data.sitting_time_formatted;
+            document.getElementById('sittingTime').textContent = data.sitting_time_formatted;
+            document.getElementById('sittingSubtitle').textContent = `${data.sitting_percentage}% of work time`;
+            document.getElementById('progressSitting').style.width = data.sitting_percentage + '%';
+
+            // Update standing time
+            document.getElementById('metricStanding').textContent = data.standing_time_formatted;
+            document.getElementById('standingTime').textContent = data.standing_time_formatted;
+            document.getElementById('standingSubtitle').textContent = `${data.standing_percentage}% of work time`;
+            document.getElementById('progressStanding').style.width = data.standing_percentage + '%';
+
+            // Update position changes
+            document.getElementById('metricChanges').textContent = data.position_changes;
+            document.getElementById('changesPerHour').textContent = data.changes_per_hour;
+            if (data.last_change_minutes_ago !== null) {
+                document.getElementById('lastChange').textContent = data.last_change_minutes_ago;
+            }
+
+            // Update health score
+            document.getElementById('metricHealth').textContent = data.health_score + '/100';
+            document.getElementById('progressHealth').style.width = data.health_score + '%';
+
+            // Update center text
+            const totalHours = (data.total_work_minutes / 60).toFixed(1);
+            
+            // Store total hours globally for use in pie chart tooltip and center text
+            window.dashboardTotalHours = parseFloat(totalHours);
+
+            // Update pie chart with actual data
+            const sitPercent = data.sitting_percentage;
+            const standPercent = data.standing_percentage;
+            pieChart.data.datasets[0].data = [sitPercent, standPercent];
+            pieChart.update();
+            
+            // Update hourly chart with today's data
+            updateHourlyChart(data);
+
+            // Update balance bar based on actual percentages
+            // Target: 60% sitting, 40% standing
+            const idealSittingPercent = 60;
+            document.getElementById('balanceBar').style.width = sitPercent + '%';
+
+            // Update balance goal text
+            document.querySelector('.metric-subtitle').textContent = 
+                `${sitPercent}% sitting / ${standPercent}% standing`;
+
+            console.log('✅ Health metrics loaded:', data);
+            
+            // Generate recommendations based on actual data
+            generateRecommendations(data);
+        } catch (error) {
+            console.error('Error loading health metrics:', error);
+        }
+    }
+
+    // ===== GENERATE HEALTH RECOMMENDATIONS =====
+    function generateRecommendations(data) {
+        const recommendations = [];
+        const sitPercent = data.sitting_percentage;
+        const standPercent = data.standing_percentage;
+        const healthScore = data.health_score;
+        const changesPerHour = parseFloat(data.changes_per_hour);
+
+        // Recommendation 1: Standing balance
+        if (sitPercent > 70) {
+            recommendations.push({
+                id: 'rec1',
+                priority: 'high',
+                icon: '1',
+                title: 'Consider standing more',
+                message: `You've been sitting ${sitPercent}% of the time today. Try to increase standing time to 40% for better posture balance.`,
+                color: '#ff6b6b'
+            });
+        } else if (standPercent > 60) {
+            recommendations.push({
+                id: 'rec1',
+                priority: 'medium',
+                icon: '1',
+                title: 'Balance your posture',
+                message: `You're standing ${standPercent}% of the time. Try to balance with more sitting time (aim for 60% sitting).`,
+                color: '#ffa500'
+            });
+        } else {
+            recommendations.push({
+                id: 'rec1',
+                priority: 'low',
+                icon: '1',
+                title: 'Great posture balance!',
+                message: `Your sitting/standing ratio (${sitPercent}%/${standPercent}%) is excellent. Keep it up!`,
+                color: '#28a745'
+            });
+        }
+
+        // Recommendation 2: Activity level
+        if (changesPerHour < 1.5) {
+            recommendations.push({
+                id: 'rec2',
+                priority: 'high',
+                icon: '2',
+                title: 'Increase position changes',
+                message: `You're changing positions ${changesPerHour} times per hour. Try to change position at least 2 times per hour.`,
+                color: '#ff6b6b'
+            });
+        } else if (changesPerHour < 2) {
+            recommendations.push({
+                id: 'rec2',
+                priority: 'medium',
+                icon: '2',
+                title: 'More movement needed',
+                message: `You're changing positions ${changesPerHour} times per hour. Aim for 2+ changes per hour to stay active.`,
+                color: '#ffa500'
+            });
+        } else {
+            recommendations.push({
+                id: 'rec2',
+                priority: 'low',
+                icon: '2',
+                title: 'Great activity level!',
+                message: `You're changing positions ${changesPerHour} times per hour. Excellent activity level!`,
+                color: '#28a745'
+            });
+        }
+
+        // Recommendation 3: Overall health score
+        if (healthScore < 50) {
+            recommendations.push({
+                id: 'rec3',
+                priority: 'high',
+                icon: '3',
+                title: 'Improve your health score',
+                message: `Your health score is ${healthScore}/100. Focus on improving posture balance and increasing position changes.`,
+                color: '#ff6b6b'
+            });
+        } else if (healthScore < 70) {
+            recommendations.push({
+                id: 'rec3',
+                priority: 'medium',
+                icon: '3',
+                title: 'Keep improving',
+                message: `Your health score is ${healthScore}/100. You're making good progress. Keep working on consistent changes.`,
+                color: '#ffa500'
+            });
+        } else {
+            recommendations.push({
+                id: 'rec3',
+                priority: 'low',
+                icon: '3',
+                title: 'Excellent health score!',
+                message: `Your health score is ${healthScore}/100. You're maintaining excellent desk health habits!`,
+                color: '#28a745'
+            });
+        }
+
+        // Recommendation 4: Next action
+        recommendations.push({
+            id: 'rec4',
+            priority: 'info',
+            icon: '4',
+            title: sitPercent > standPercent ? 'Next: Stand up!' : 'Next: Sit down',
+            message: sitPercent > standPercent 
+                ? `You've been sitting for a while. Consider standing for the next 15-20 minutes.`
+                : `You've been standing for a while. Consider sitting for a bit to rest.`,
+            color: '#327AD9'
+        });
+
+        // Render recommendations
+        const container = document.getElementById('recommendationsContainer');
+        container.innerHTML = '';
+        
+        recommendations.forEach((rec, index) => {
+            const badgeColor = rec.priority === 'high' ? '#ff6b6b' : rec.priority === 'medium' ? '#ffa500' : rec.priority === 'info' ? '#327AD9' : '#28a745';
+            const badgeText = rec.priority === 'info' ? 'INFO' : rec.priority.toUpperCase();
+            
+            const recElement = document.createElement('div');
+            recElement.className = 'recommendation-item';
+            recElement.setAttribute('data-priority', rec.priority);
+            recElement.innerHTML = `
+                <input type="checkbox" id="${rec.id}" style="margin-right: 10px; cursor: pointer;">
+                <span class="recommendation-icon" style="background: ${rec.color};">${rec.icon}</span>
+                <label for="${rec.id}" style="cursor: pointer; flex: 1;">
+                    <strong>${rec.title}:</strong> ${rec.message}
+                </label>
+                <span class="priority-badge" style="background: ${badgeColor}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">${badgeText}</span>
+            `;
+            container.appendChild(recElement);
+        });
+
+        // Update total recommendations count
+        document.getElementById('totalRecommendations').textContent = recommendations.length;
+
+        // Load checkbox states from localStorage
+        const savedStates = JSON.parse(localStorage.getItem('recommendationStates') || '{}');
+        container.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            if (savedStates[checkbox.id]) {
+                checkbox.checked = true;
+            }
+            checkbox.addEventListener('change', function() {
+                // Save state to localStorage
+                const states = JSON.parse(localStorage.getItem('recommendationStates') || '{}');
+                if (this.checked) {
+                    states[this.id] = true;
+                } else {
+                    delete states[this.id];
+                }
+                localStorage.setItem('recommendationStates', JSON.stringify(states));
+                updateCompletedCount();
+            });
+        });
+        
+        updateCompletedCount();
+    }
+
+    function updateCompletedCount() {
+        const completedCount = document.querySelectorAll('#recommendationsContainer input[type="checkbox"]:checked').length;
+        document.getElementById('completedCount').textContent = completedCount;
+    }
+    
+    // Clear recommendations when midnight passes (new day)
+    function checkAndClearDailyRecommendations() {
+        const lastClearDate = localStorage.getItem('lastRecommendationClearDate');
+        const today = new Date().toDateString();
+        
+        if (lastClearDate !== today) {
+            localStorage.setItem('recommendationStates', '{}');
+            localStorage.setItem('lastRecommendationClearDate', today);
+        }
+    }
+
+    // Position tooltips dynamically
+    document.querySelectorAll('.info-btn').forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            const rect = this.getBoundingClientRect();
+            const tooltip = this.nextElementSibling;
+            if (tooltip && tooltip.classList.contains('tooltip')) {
+                tooltip.style.top = (rect.top - tooltip.offsetHeight - 10) + 'px';
+                tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+                tooltip.style.transform = 'translateX(-50%)';
+            }
+        });
+    });
+
+    // Load metrics on page load and refresh every 60 seconds
+    document.addEventListener('DOMContentLoaded', loadHealthMetrics);
+    setInterval(loadHealthMetrics, 60000); // Refresh every 60 seconds
+
+    // Reset today's metrics
+    document.getElementById('resetMetricsBtn').addEventListener('click', async () => {
+        if (!confirm('Are you sure you want to reset today\'s stats? This cannot be undone.')) {
+            return;
+        }
+        try {
+            // Get CSRF token from cookie
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            const csrftoken = getCookie('csrftoken');
+            const response = await fetch('/reset-daily-metrics/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            });
+            const data = await response.json();
+            if (data.success) {
+                alert('Today\'s stats have been reset!');
+                loadHealthMetrics(); // Reload metrics
+            } else {
+                alert('Error: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error resetting metrics:', error);
+            alert('Failed to reset metrics');
+        }
     });
 </script>
 {% endblock %}

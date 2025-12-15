@@ -33,7 +33,7 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transition: transform 0.2s;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .metric-card::before {
@@ -95,6 +95,76 @@
     color: #666;
     font-size: 14px;
     margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    color: #555;
+    font-size: 12px;
+    cursor: help;
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.info-btn:hover {
+    background: #327AD9;
+    color: white;
+}
+
+.info-btn[title]::after {
+    content: attr(title);
+    position: fixed;
+    bottom: auto;
+    top: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10000;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.info-btn[title]:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+.info-btn[title]::before {
+    content: '';
+    position: fixed;
+    bottom: auto;
+    top: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #333;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.info-btn[title]:hover::before {
+    opacity: 1;
+    visibility: visible;
 }
 
 .metric-value {

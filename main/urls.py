@@ -3,7 +3,7 @@ from .views import (
     index, login_view, register_view, dashboard_view, load_view, overview,
     desk, logout_view, approvals_view, forgot_password_view,
     pair_desk_view, unpair_desk_view, user_desk_status,
-    desks_status_api, set_desk_height, book_desk_view, delete_bug, update_bug_status, admin_bugs_view, submit_bug
+    desks_status_api, set_desk_height, book_desk_view, delete_bug, update_bug_status, admin_bugs_view, submit_bug, health_metrics_api, reset_daily_metrics
 )
 
 urlpatterns = [
@@ -22,6 +22,8 @@ urlpatterns = [
     path("api/user-status/<str:desk_id>/", user_desk_status, name="user_desk_status"),
     path("api/desks_status/", desks_status_api, name="desks_status_api"),
     path('api/set_desk_height/', set_desk_height, name='set_desk_height'),
+    path('api/health_metrics/', health_metrics_api, name='health_metrics_api'),
+    path('reset-daily-metrics/', reset_daily_metrics, name='reset_daily_metrics'),
     path('submit_bug/', submit_bug, name='submit_bug'),
     path('approvals/bugs/', admin_bugs_view, name='admin_bugs'),
     path('approvals/bugs/update/', update_bug_status, name='update_bug_status'),
