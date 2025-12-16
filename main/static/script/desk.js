@@ -14,6 +14,7 @@ const popup = safeGet("healthPopup");
 const message = safeGet("healthMessage");
 const acceptBtn = safeGet("acceptBtn");
 const ignoreBtn = safeGet("ignoreBtn");
+const closeHealthBtn = safeGet("closeHealthPopup");
 const toggleHealth = safeGet("toggleHealth");
 const deskControls = safeGet("desk-controls");
 
@@ -125,7 +126,7 @@ function monitorDeskMovement(deskId, targetHeight) {
             // Stop Condition 2: Desk stopped moving (and it wasn't just starting)
             // We wait > 2 attempts to ensure the simulator had time to start the motor
             else if (isMoving === false && attempts > 2) { 
-                stopLoading(`Desk stopped at ${currentH}cm`, "warning", currentH);
+                stopLoading(`Desk stopped at ${Math.round(currentH / 10)}cm`, "warning", currentH);
             }
             
             // Timeout
@@ -136,17 +137,19 @@ function monitorDeskMovement(deskId, targetHeight) {
         .catch(err => console.error("Polling error", err));
     }, 1000);
 
-    function stopLoading(msg, type, finalHeight) {
-        clearInterval(poll);
-        if (loadingOverlay) loadingOverlay.classList.remove("active");
-        setStatusMessage(msg, type);
-        
-        // Sync slider to where it actually ended up
-        if (finalHeight && slider && valueLabel) {
-            slider.value = finalHeight;
-            valueLabel.textContent = finalHeight;
-        }
-    }
+    function stopLoading(msg, type, finalHeightMm) {
+      clearInterval(poll);
+      if (loadingOverlay) loadingOverlay.classList.remove("active");
+      setStatusMessage(msg, type);
+
+      // 🔧 Convert mm → cm for UI
+      if (finalHeightMm && slider && valueLabel) {
+          const finalHeightCm = Math.round(finalHeightMm / 10);
+          slider.value = finalHeightCm;
+          valueLabel.textContent = finalHeightCm;
+      }
+  }
+
 }
 
 // 1. Request Movement (Triggers Modal)
@@ -289,6 +292,10 @@ ignoreBtn && ignoreBtn.addEventListener("click", () => {
   }
 });
 
+closeHealthBtn && closeHealthBtn.addEventListener("click", () => {
+  hidePopup();
+});
+
 // --------------------------- Profiles / Config / Status ---------------------------
 document.querySelectorAll(".profile-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -354,9 +361,10 @@ function activateDeskPanel(deskId) {
           deskControls.style.display = isPaired ? "block" : "none";
           
           if (isPaired && data.current_height && slider && valueLabel) {
-              slider.value = data.current_height;
-              valueLabel.textContent = data.current_height;
-          }
+            const heightCm = Math.round(data.current_height / 10);
+            slider.value = heightCm;
+            valueLabel.textContent = heightCm;
+        }
       }
       
       if (isPaired) {

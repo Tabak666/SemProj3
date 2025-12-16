@@ -1,18 +1,30 @@
 from .models import UserTablePairs, Users, DeskBooking
 from django.utils import timezone
+from django.conf import settings
 import json, os
+from core.api_client.calls import get_desk_by_id
 
-DATA_FILE = os.path.join("data", "desk_state.json")
 def get_desk_data(desk_id):
-    """Return desk data for a specific desk_id from the JSON file."""
+    """
+    Get LIVE desk data directly from the simulator API
+    """
     try:
-        with open(DATA_FILE, "r") as f:
-            data = json.load(f)
-        return data.get(desk_id, {}).get("desk_data", {})
-    except FileNotFoundError:
+        desk = get_desk_by_id(desk_id)
+        if not desk:
+            return {}
+
+        return {
+            "state": {
+                "position_mm": desk.state.position_mm,
+                "speed_mms": desk.state.speed_mms
+            }
+        }
+    except Exception as e:
+        print("[get_desk_data ERROR]", e)
         return {}
-    except json.JSONDecodeError:
-        return {}
+
+# Use absolute path to ensure the file is found regardless of working directory
+DATA_FILE = os.path.join(settings.BASE_DIR, "tableAPI", "data", "desks_state.json")
 
 def pair_user_with_desk(user, desk_id):
     UserTablePairs.objects.filter(user_id = user, end_time__isnull=True).update(end_time=timezone.now())#end prevoius pairings
